@@ -1,0 +1,38 @@
+# Bytecode / cachés
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales (¡lo típico en Python!)
+.venv/
+venv/
+env/
+ENV/
+
+bin/
+.buildozer/
+# Paquetes y builds
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Tests / herramientas
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Config y secretos locales
+.env
+.env.*
+*.sqlite3
+
+# IDE/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
