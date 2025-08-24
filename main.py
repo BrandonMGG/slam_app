@@ -10,11 +10,11 @@ from kivy.utils import platform
 
 import threading, os, glob, time
 
-# En desktop usaremos FileChooser
+
 if platform != "android":
     from kivy.uix.filechooser import FileChooserIconView
 
-# En Android usamos androidstorage4kivy (SAF)
+
 AS4K = False
 if platform == "android":
     try:
@@ -30,7 +30,7 @@ class Root(BoxLayout):
         self.status = Label(text="Selecciona un video y ejecuta SLAM", size_hint=(1, 0.1))
         self.add_widget(self.status)
 
-        # Área de selección: desktop = FileChooser, Android = botón
+        
         if platform != "android":
             self.fc = FileChooserIconView(
                 path=os.path.abspath("videos"),
@@ -58,7 +58,7 @@ class Root(BoxLayout):
         self.local_video = None
         self._elapsed = 0.0
 
-        # SAF solo en Android
+        
         self.ss = None
         self.chooser = None
         if platform == "android" and AS4K:
@@ -83,7 +83,7 @@ class Root(BoxLayout):
             self.status.text = f"Video listo: {os.path.basename(path)}"
             self.btn_run.disabled = False
 
-    # Callback de SAF (Android)
+    
     def on_selection_android(self, shared_file_list):
         if not shared_file_list:
             self.status.text = "Selección cancelada."
@@ -106,9 +106,7 @@ class Root(BoxLayout):
 
     def _worker(self):
         try:
-            # Import perezoso del núcleo SLAM (evita crash al abrir)
             from slam_core import PoseGraphSLAM
-
             slam = PoseGraphSLAM()
             t0 = time.time()
             slam.process_video_input(self.local_video)
@@ -124,7 +122,10 @@ class Root(BoxLayout):
             else:
                 Clock.schedule_once(lambda dt: self._set_msg("No se encontró PNG; revisa CSV/logs."), 0)
         except Exception as e:
-            Clock.schedule_once(lambda dt: self._set_msg(f"Error: {e}"), 0)
+            # captura el mensaje antes de agendar el lambda
+            msg = f"{type(e).__name__}: {e}"
+            Clock.schedule_once(lambda dt, m=msg: self._set_msg(f"Error: {m}"), 0)
+
 
     def _show_result(self, path):
         self.preview.source = path

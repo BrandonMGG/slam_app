@@ -98,11 +98,11 @@ class PoseGraphSLAM:
             self.previous_keyframe_pose = np.eye(4)
 
     def optimize_pose_graph(self):
-        # Si no hay keyframes, trayectoria vacía
+        
         if not self.relative_transformations:
             return np.zeros((1, 2), dtype=np.float32)
 
-        # Integrar desplazamientos relativos (simple “odometría” acumulada)
+        
         positions = [np.array([0.0, 0.0, 0.0])]
         for T in self.relative_transformations:
             dx, dy, dz = T[:3, 3]
@@ -115,16 +115,82 @@ class PoseGraphSLAM:
         traj_xz = positions[:, [0, 2]]
 
         # Suavizado básico con ventana 5
-        if len(traj_xz) >= 5:
-            k = 5
-            kernel = np.ones(k) / k
-            x = np.convolve(traj_xz[:, 0], kernel, mode='same')
-            z = np.convolve(traj_xz[:, 1], kernel, mode='same')
-            traj_xz = np.column_stack([x, z]).astype(np.float32)
+        # if len(traj_xz) >= 5:
+        #     k = 5
+        #     kernel = np.ones(k) / k
+        #     x = np.convolve(traj_xz[:, 0], kernel, mode='same')
+        #     z = np.convolve(traj_xz[:, 1], kernel, mode='same')
+        #     traj_xz = np.column_stack([x, z]).astype(np.float32)
 
         return traj_xz
 
+    
+    def _normalize_traj_for_canvas(self, traj_xy, W, H, margin=60, y_up=True, center=True):
+        import numpy as np
+        if traj_xy is None or len(traj_xy) == 0:
+            return None
+        pts = np.asarray(traj_xy, dtype=float).copy()
+        mins = pts.min(axis=0); maxs = pts.max(axis=0)
+        span = np.maximum(maxs - mins, 1e-6)
+        scale = 0.9 * min((W - 2*margin) / span[0], (H - 2*margin) / span[1])
+        if center:
+            center_world = (mins + maxs) / 2.0
+            pts -= center_world
+            cx, cy = W / 2.0, H / 2.0
+            xs = cx + scale * pts[:, 0]
+            ys = cy + (-scale * pts[:, 1] if y_up else scale * pts[:, 1])
+        else:
+            pts -= mins
+            xs = margin + scale * pts[:, 0]
+            ys = (H - margin - scale * pts[:, 1]) if y_up else (margin + scale * pts[:, 1])
+        return np.stack([xs, ys], axis=1).astype(np.int32)
 
+    
+    def _save_plot_cv_matplotlibish(self, traj_xy, out_png, bg=(255,255,255), info_lines=None):
+        import cv2, numpy as np, os
+        H, W = 720, 1280
+        img = np.full((H, W, 3), bg, np.uint8)
+
+        # grid suave
+        for x in range(0, W, 100):
+            cv2.line(img, (x, 0), (x, H), (230, 230, 230), 1)
+        for y in range(0, H, 100):
+            cv2.line(img, (0, y), (W, y), (230, 230, 230), 1)
+
+        if traj_xy is not None and len(traj_xy) >= 2:
+            pts_img = self._normalize_traj_for_canvas(traj_xy, W, H, margin=60, y_up=True, center=True)
+            cv2.polylines(img, [pts_img.reshape(-1,1,2)], False, (50, 50, 200), 2, cv2.LINE_AA)
+            cv2.circle(img, tuple(pts_img[0]), 6, (0, 180, 0), -1)
+            cv2.circle(img, tuple(pts_img[-1]), 6, (0, 0, 200), -1)
+
+            # barra de escala (1m/5m)
+            mins = np.min(traj_xy, axis=0); maxs = np.max(traj_xy, axis=0)
+            span = np.maximum(maxs - mins, 1e-6)
+            scale = 0.9 * min((W - 120) / span[0], (H - 120) / span[1])
+            pix_per_meter = scale
+            meters = 1 if pix_per_meter >= 80 else 5
+            bar = int(round(pix_per_meter * meters))
+            x0, y0 = W - 180, H - 80
+            cv2.line(img, (x0, y0), (x0 + bar, y0), (0, 0, 0), 3, cv2.LINE_AA)
+            cv2.putText(img, f"{meters} m", (x0 + bar + 10, y0 + 5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1, cv2.LINE_AA)
+
+        # ejes
+        cv2.arrowedLine(img, (80, H-80), (200, H-80), (0,0,0), 2, tipLength=0.03)  # +X
+        cv2.arrowedLine(img, (80, H-80), (80, H-200), (0,0,0), 2, tipLength=0.03)  # +Z (Y up)
+        cv2.putText(img, "X (m)", (205, H-75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
+        cv2.putText(img, "Z (m)", (60, H-205), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
+
+        
+        if info_lines:
+            y0, dy = 30, 28
+            for i, line in enumerate(info_lines):
+                cv2.putText(img, line, (20, y0 + i*dy), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (30,30,30), 2, cv2.LINE_AA)
+
+        os.makedirs(os.path.dirname(out_png), exist_ok=True)
+        cv2.imwrite(out_png, img)
+
+    
     def save_trajectory_outputs(self, trajectory, input_video_path):
         tipo_lms = self.name
         timestamp = datetime.now().strftime("%H%M_%d%m_%Y")
@@ -144,37 +210,6 @@ class PoseGraphSLAM:
         avg_matches = self.total_tracked_matches / max(1, self.total_pose_estimations)
         triangulation_success_rate = self.total_successful_frames / max(1, self.total_pose_estimations)
 
-        # --- Render PNG con OpenCV ---
-        h, w = 720, 1280
-        margin = 40
-        img = np.full((h, w, 3), 255, np.uint8)
-
-        if len(trajectory) >= 2:
-            # Normalizar a canvas
-            mins = trajectory.min(axis=0)
-            maxs = trajectory.max(axis=0)
-            span = np.maximum(maxs - mins, 1e-6)
-            # Dejar margen y mantener aspecto
-            scale = 0.9 * min((w - 2*margin) / span[0], (h - 2*margin) / span[1])
-
-            pts = ( (trajectory - mins) * scale )
-            # Invertir eje Z->Y para pantalla y centrar con margen
-            pts_img = np.zeros_like(pts)
-            pts_img[:, 0] = margin + pts[:, 0]
-            pts_img[:, 1] = h - margin - pts[:, 1]
-
-            pts_img = pts_img.astype(np.int32).reshape(-1, 1, 2)
-
-            # Polilínea
-            cv2.polylines(img, [pts_img], False, (200, 0, 0), 2)
-
-            # Start/End
-            cv2.circle(img, tuple(pts_img[0, 0]), 6, (0, 180, 0), -1)
-            cv2.circle(img, tuple(pts_img[-1, 0]), 6, (0, 0, 200), -1)
-
-        # Texto de métricas
-        y0 = 30
-        dy = 28
         info = [
             f"Keyframes: {num_keyframes}",
             f"Prom. matches/pose: {avg_matches:.1f}",
@@ -182,23 +217,20 @@ class PoseGraphSLAM:
             f"Mov. medio entre keyframes: {avg_translation:.2f} m",
             f"Video: {os.path.basename(input_video_path)}",
         ]
-        for i, line in enumerate(info):
-            cv2.putText(img, line, (20, y0 + i*dy), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (30,30,30), 2, cv2.LINE_AA)
 
-        cv2.imwrite(output_base + ".png", img)
+        
+        self._save_plot_cv_matplotlibish(trajectory, output_base + ".png", info_lines=info)
 
 
     def process_video_input(self, video_path):
         video_capture = cv2.VideoCapture(video_path)
-
         while video_capture.isOpened():
             success, frame = video_capture.read()
             if not success:
                 break
             self.process_frame(frame)
-
         video_capture.release()
 
-        optimized_trajectory = self.optimize_pose_graph()
-        self.save_trajectory_outputs(optimized_trajectory, video_path)
+        traj_2d = np.array([[pose[0, 3], pose[2, 3]] for pose in self.keyframe_poses], dtype=float)
+        self.save_trajectory_outputs(traj_2d, video_path)
 
