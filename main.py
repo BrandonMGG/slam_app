@@ -1,4 +1,7 @@
-import os, time, glob
+import os, time, glob, sys, traceback, threading
+import logging
+from datetime import datetime
+
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
@@ -6,24 +9,110 @@ from kivy.uix.button import Button
 from kivy.uix.image import Image
 from kivy.clock import Clock
 from kivy.utils import platform
+from kivy.logger import Logger as KivyLogger
 
+# --- Kivy exception bridge ---
+from kivy.base import ExceptionManager, ExceptionHandler
+
+# Widgets propios
 from widgets.camera_android import AndroidCamera
 from slam.runner import SlamRunner
 
-# --- SAF (Android) / FileChooser (desktop) ---
+
+# ===================== Logging setup =====================
+def _ensure_dir(path: str) -> str:
+    try:
+        os.makedirs(path, exist_ok=True)
+    except Exception as e:
+        KivyLogger.warning(f"APP: no se pudo crear carpeta '{path}': {e}")
+    return path
+
+def _setup_app_logger():
+    # /sdcard/Download/slam_logs/
+    base = "/sdcard/Download/slam_logs"
+    try:
+        _ensure_dir(base)
+        testfile = os.path.join(base, ".write_test")
+        with open(testfile, "w") as f:
+            f.write("ok")
+        os.remove(testfile)
+        log_dir = base
+    except Exception as e:
+        # Fallback a carpeta local 
+        log_dir = _ensure_dir(os.path.join("resultados", "logs"))
+        KivyLogger.warning(f"APP: fallback de logs a '{log_dir}': {e}")
+
+    log_path = os.path.join(log_dir, "main.log")
+
+    logger = logging.getLogger("APP")
+    logger.setLevel(logging.INFO)
+    logger.propagate = False  # no duplicar en root
+
+    # Limpia handlers duplicados en hot-reloads
+    for h in list(logger.handlers):
+        logger.removeHandler(h)
+
+    fmt = logging.Formatter(
+        fmt="%(asctime)s | %(levelname)s | %(threadName)s | %(name)s | %(message)s",
+        datefmt="%H:%M:%S"
+    )
+    try:
+        fh = logging.FileHandler(log_path, encoding="utf-8")
+        fh.setLevel(logging.INFO)
+        fh.setFormatter(fmt)
+        logger.addHandler(fh)
+    except Exception as e:
+        KivyLogger.warning(f"APP: no se pudo abrir FileHandler '{log_path}': {e}")
+
+    # También a consola (fusiona con Kivy logcat)
+    sh = logging.StreamHandler()
+    sh.setLevel(logging.INFO)
+    sh.setFormatter(fmt)
+    logger.addHandler(sh)
+
+    logger.info(f"Logger APP listo -> {log_path}")
+    return logger, log_dir, log_path
+
+APP_LOG, APP_LOG_DIR, APP_LOG_FILE = _setup_app_logger()
+
+# Captura global de excepciones no manejadas
+def _global_excepthook(exc_type, exc, tb):
+    APP_LOG.exception("Excepción NO manejada (global)", exc_info=(exc_type, exc, tb))
+    # deja que Kivy también lo imprima
+    sys.__excepthook__(exc_type, exc, tb)
+sys.excepthook = _global_excepthook
+
+# Captura excepciones en threads 
+def _threading_excepthook(args):
+    APP_LOG.exception(
+        f"Excepción en thread '{args.thread.name}'",
+        exc_info=(args.exc_type, args.exc_value, args.exc_traceback)
+    )
+threading.excepthook = _threading_excepthook
+
+class _KivyExceptionHandler(ExceptionHandler):
+    def handle_exception(self, inst):
+        APP_LOG.exception("Excepción propagada por Kivy", exc_info=inst)
+        return ExceptionManager.PASS
+ExceptionManager.add_handler(_KivyExceptionHandler())
+
+
+# ===================== UI principal =====================
 AS4K = False
 if platform == "android":
     try:
         from androidstorage4kivy import Chooser, SharedStorage
         AS4K = True
-    except Exception:
-        AS4K = False
+        APP_LOG.info("AS4K disponible (Chooser/SharedStorage OK).")
+    except Exception as e:
+        APP_LOG.warning(f"AS4K no disponible: {e}")
 else:
     from kivy.uix.filechooser import FileChooserIconView
-
+    APP_LOG.info("Ejecutando en escritorio (no-Android).")
 
 class Root(BoxLayout):
     def __init__(self, **kw):
+        APP_LOG.info("Construyendo Root UI…")
         super().__init__(orientation='vertical', spacing=6, padding=6, **kw)
 
         # -------- Barra Cámara --------
@@ -43,6 +132,7 @@ class Root(BoxLayout):
         self.cam = AndroidCamera(index=0,
                                  resolution=AndroidCamera.camera_resolution,
                                  play=False)
+        APP_LOG.info(f"Cámara AndroidCamera creada: res={AndroidCamera.camera_resolution}")
         self.add_widget(self.cam)
 
         # -------- Barra SLAM en vivo --------
@@ -63,22 +153,15 @@ class Root(BoxLayout):
         # -------- (Desktop) FileChooser --------
         self.fc = None
         if platform != "android":
-            self.fc = FileChooserIconView(
-                path=os.path.abspath("videos"),
-                filters=['*.mp4', '*.MP4'],
-                size_hint=(1, 0.28)
-            )
-            self.add_widget(self.fc)
-
-        # -------- Barra SLAM desde Video --------
-        bar_vid = BoxLayout(size_hint=(1, 0.12), spacing=6)
-        self.btn_pick_video = Button(text='Abrir video')
-        self.btn_run_video  = Button(text='Ejecutar SLAM (video)', disabled=True)
-        self.btn_pick_video.bind(on_release=self._pick_video)
-        self.btn_run_video.bind(on_release=self._run_slam_video)
-        bar_vid.add_widget(self.btn_pick_video)
-        bar_vid.add_widget(self.btn_run_video)
-        self.add_widget(bar_vid)
+            try:
+                self.fc = FileChooserIconView(
+                    path=os.path.abspath("videos"),
+                    filters=['*.mp4', '*.MP4'],
+                    size_hint=(1, 0.28)
+                )
+                self.add_widget(self.fc)
+            except Exception as e:
+                APP_LOG.exception(f"No se pudo inicializar FileChooser: {e}")
 
         # --- Estado de video / SAF ---
         self.local_video = None
@@ -87,178 +170,363 @@ class Root(BoxLayout):
         self.ss = None
         self.chooser = None
         if platform == "android" and AS4K:
-            self.ss = SharedStorage()
-            self.chooser = Chooser(self._on_selection_android)
+            try:
+                self.ss = SharedStorage()
+                self.chooser = Chooser(self._on_selection_android)
+                APP_LOG.info("SharedStorage & Chooser listos.")
+            except Exception as e:
+                APP_LOG.exception(f"Fallo creando SharedStorage/Chooser: {e}")
+
+        # --- Paths de preview ---
+        self._preview_path = "/sdcard/Download/slam_logs/plots/live_preview.png"
+        try:
+            os.makedirs(os.path.dirname(self._preview_path), exist_ok=True)
+        except Exception as e:
+            APP_LOG.warning(f"No se pudo crear dir de preview '{self._preview_path}': {e}")
+        APP_LOG.info(f"Preview path para SLAM en vivo: {self._preview_path}")
 
         # --- SLAM runner (vivo) ---
-        preview_path = os.path.join('resultados', 'live', 'preview.png')
-        os.makedirs(os.path.dirname(preview_path), exist_ok=True)
-        self.runner = SlamRunner(
-            preview_path=preview_path,
-            preview_period=0.5,
-            on_preview=lambda p: Clock.schedule_once(lambda dt: self._refresh_preview(p), 0),
-            on_status=lambda s: Clock.schedule_once(lambda dt: self._set_status(s), 0),
-        )
+        self.runner = self._new_runner()
+        APP_LOG.info(f"SlamRunner instanciado correctamente (id={id(self.runner)}).")
 
-        # Muestreo de frames hacia SLAM vivo
-        Clock.schedule_interval(self._tick, 0.5)
-        Clock.schedule_interval(self._grab_frame_for_slam, 1/20)  # ~20 Hz
+        # Muestreo de frames hacia SLAM vivo 
+        self._ev_tick = Clock.schedule_interval(self._tick, 0.5)
+        self._ev_grab = Clock.schedule_interval(self._grab_frame_for_slam, 1/20)  # ~20 Hz
+        APP_LOG.info(f"ClockEvents creados: tick={self._ev_tick}, grab={self._ev_grab}")
+
+    # ---------- runner limpio ----------
+    def _new_runner(self) -> SlamRunner:
+        def _safe_refresh(path):
+            if not self.runner or not self.runner.running:
+                APP_LOG.info(f"on_preview ignorado (runner no running). path={path}")
+                return
+            Clock.schedule_once(lambda dt: self._refresh_preview(path), 0)
+
+        def _safe_status(s):
+            Clock.schedule_once(lambda dt: self._set_status(s), 0)
+
+        APP_LOG.info("Creando nuevo SlamRunner…")
+        return SlamRunner(
+            preview_path=self._preview_path,
+            preview_period=0.5,
+            on_preview=_safe_refresh,
+            on_status=_safe_status,
+        )
 
     # ========== Cámara ==========
     def _start_cam(self, *_):
-        self.cam.play = True
-        self.btn_start.disabled = True
-        self.btn_stop.disabled = False
-        self.lbl.text = 'Cámara iniciada…'
+        APP_LOG.info("UI: Iniciar cámara (click)")
+        try:
+            self.cam.play = True
+            self.btn_start.disabled = True
+            self.btn_stop.disabled = False
+            self.lbl.text = 'Cámara iniciada…'
+            APP_LOG.info("Cámara -> ON")
+        except Exception as e:
+            APP_LOG.exception(f"Error al iniciar cámara: {e}")
+            self.lbl.text = 'Error iniciando cámara'
 
     def _stop_cam(self, *_):
-        self.cam.play = False
-        self.btn_start.disabled = False
-        self.btn_stop.disabled = True
-        self.lbl.text = 'Cámara detenida'
+        APP_LOG.info("UI: Detener cámara (click)")
+        try:
+            self.cam.play = False
+            self.btn_start.disabled = False
+            self.btn_stop.disabled = True
+            self.lbl.text = 'Cámara detenida'
+            APP_LOG.info("Cámara -> OFF")
+        except Exception as e:
+            APP_LOG.exception(f"Error al detener cámara: {e}")
+            self.lbl.text = 'Error deteniendo cámara'
 
     def _rotate_cam(self, *_):
-        self.cam.rotate_next()
-        self.lbl.text = f'Rotación: {self.cam.rot_k * 90}°'
+        APP_LOG.info("UI: Rotar cámara 90° (click)")
+        try:
+            self.cam.rotate_next()
+            self.lbl.text = f'Rotación: {self.cam.rot_k * 90}°'
+            APP_LOG.info(f"Nueva rotación cam: {self.cam.rot_k * 90}°")
+        except Exception as e:
+            APP_LOG.exception(f"Error al rotar cámara: {e}")
 
     def _tick(self, dt):
-        if self.cam.play:
-            self.lbl.text = f'Cámara: ON  |  Frames: {self.cam.frames}  |  Rot: {self.cam.rot_k*90}°'
-        else:
-            self.lbl.text = 'Cámara: OFF'
+        try:
+            if self.cam.play:
+                self.lbl.text = f'Cámara: ON  |  Frames: {self.cam.frames}  |  Rot: {self.cam.rot_k*90}°'
+            else:
+                self.lbl.text = 'Cámara: OFF'
+        except Exception as e:
+            APP_LOG.exception(f"_tick error: {e}")
 
     # ========== SLAM en vivo ==========
     def _start_slam(self, *_):
-        if self.video_running:   # evitar correr los 2 a la vez
-            self._set_status('Antes detén el SLAM (video).')
-            return
-        if self.runner.running:
-            return
-        self.runner.start()
-        if self.runner.running:
-            self.btn_slam_start.disabled = True
-            self.btn_slam_stop.disabled = False
+        APP_LOG.info("UI: Iniciar SLAM vivo (click)")
+        try:
+            if self.video_running:
+                msg = 'Antes detén el SLAM (video).'
+                self._set_status(msg)
+                APP_LOG.warning(msg)
+                return
+
+            # Si hubiera restos de un runner previo, reinstanciamos
+            if not self.runner:
+                APP_LOG.info("No había runner; creando uno nuevo.")
+                self.runner = self._new_runner()
+            elif getattr(self.runner, "_dead", False) and not self.runner.running:
+                APP_LOG.info("Runner previo marcado como dead; reinstanciando…")
+                self.runner = self._new_runner()
+
+            if self.runner.running:
+                APP_LOG.info("Runner ya estaba en ejecución.")
+                return
+
+            self.runner.start()
+            if self.runner.running:
+                self.btn_slam_start.disabled = True
+                self.btn_slam_stop.disabled = False
+                APP_LOG.info("Runner -> START OK")
+            else:
+                APP_LOG.warning("Runner.start() no activó running=True")
+        except Exception as e:
+            APP_LOG.exception(f"Error al iniciar SLAM vivo: {e}")
+            self._set_status(f"Error iniciando SLAM: {e}")
 
     def _stop_slam(self, *_):
-        self.runner.stop()
-        self.btn_slam_start.disabled = False
-        self.btn_slam_stop.disabled = True
-        self.status.text = 'SLAM detenido'
+        APP_LOG.info("UI: Detener SLAM vivo (click)")
+        try:
+            if self.runner:
+                self.runner.stop()
+            self.btn_slam_start.disabled = False
+            self.btn_slam_stop.disabled = True
+            self.status.text = 'SLAM detenido'
+            APP_LOG.info("Runner -> STOP OK")
+
+            # Reinstanciamos el runner para garantizar un estado limpio para la próxima corrida
+            self.runner = self._new_runner()
+            APP_LOG.info(f"Runner reinstanciado tras STOP (id={id(self.runner)}).")
+        except Exception as e:
+            APP_LOG.exception(f"Error al detener SLAM vivo: {e}")
+            self._set_status(f"Error deteniendo SLAM: {e}")
 
     def _grab_frame_for_slam(self, dt):
         # Pasa frames NV21 del provider android al runner, sin bloquear UI
-        if not (self.runner.running and self.cam.play):
-            return
-        cam = self.cam
-        if not hasattr(cam, '_camera') or cam._camera is None:
-            return
-        buf = getattr(cam._camera, '_buffer', None)
-        if buf is None:
-            return
         try:
-            raw = bytearray(buf)  # jnius ByteArray -> bytes-like
-        except Exception:
-            return
-        w, h = cam.resolution
-        self.runner.push_nv21(bytes(raw), w, h, cam.rot_k)
+            r = self.runner
+            if not (r and r.running and self.cam.play):
+                return
+
+            cam = self.cam
+            if not hasattr(cam, '_camera') or cam._camera is None:
+                return
+
+            buf = getattr(cam._camera, '_buffer', None)
+            if buf is None:
+                return
+
+            try:
+                # Copiamos siempre a bytes para aislar del buffer Java
+                raw = bytearray(buf)
+                raw = bytes(raw)
+            except Exception as e:
+                APP_LOG.exception(f"Error leyendo buffer NV21 (jnius): {e}")
+                return
+
+            w, h = cam.resolution
+            rot_k = cam.rot_k
+
+            # Empujar al runner
+            try:
+                r.push_nv21(raw, w, h, rot_k)
+            except Exception as e:
+                APP_LOG.exception(f"runner.push_nv21 lanzó excepción: {e}")
+                # Si el runner falló internamente, lo detenemos para evitar estados parciales
+                try:
+                    r.stop()
+                except Exception:
+                    pass
+                self.btn_slam_start.disabled = False
+                self.btn_slam_stop.disabled = True
+                self._set_status("SLAM detenido por error al empujar frame.")
+        except Exception as e:
+            APP_LOG.exception(f"_grab_frame_for_slam error: {e}")
 
     # ========== SLAM desde video ==========
     def _pick_video(self, *_):
-        if platform == "android":
-            if not self.chooser:
-                self._set_status("SAF no disponible.")
-                return
-            self.chooser.choose_content('video/*')
-        else:
-            if not self.fc or not self.fc.selection:
-                self._set_status("Selecciona un .mp4 en el FileChooser.")
-                return
-            path = self.fc.selection[0]
-            if not os.path.exists(path):
-                self._set_status("Archivo no válido.")
-                return
-            self.local_video = path
-            self._set_status(f"Video listo: {os.path.basename(path)}")
-            self.btn_run_video.disabled = False
+        APP_LOG.info("UI: Abrir video (click)")
+        try:
+            if platform == "android":
+                if not self.chooser:
+                    self._set_status("SAF no disponible.")
+                    APP_LOG.warning("SAF no disponible en Android.")
+                    return
+                self.chooser.choose_content('video/*')
+            else:
+                if not self.fc or not self.fc.selection:
+                    self._set_status("Selecciona un .mp4 en el FileChooser.")
+                    return
+                path = self.fc.selection[0]
+                if not os.path.exists(path):
+                    self._set_status("Archivo no válido.")
+                    return
+                self.local_video = path
+                self._set_status(f"Video listo: {os.path.basename(path)}")
+                self.btn_run_video.disabled = False
+                APP_LOG.info(f"Video (desktop) listo: {path}")
+        except Exception as e:
+            APP_LOG.exception(f"_pick_video error: {e}")
 
     def _on_selection_android(self, shared_file_list):
-        if not shared_file_list:
-            self._set_status("Selección cancelada.")
-            return
         try:
+            if not shared_file_list:
+                self._set_status("Selección cancelada.")
+                APP_LOG.info("Selección de video cancelada.")
+                return
             dest = self.ss.copy_from_shared(shared_file_list[0])  # a carpeta privada
             self.local_video = dest
             self._set_status(f"Video listo: {os.path.basename(dest)}")
             self.btn_run_video.disabled = False
+            APP_LOG.info(f"Video (android) copiado a privado: {dest}")
         except Exception as e:
+            APP_LOG.exception(f"No se pudo copiar el video: {e}")
             self._set_status(f"No se pudo copiar el video: {e}")
 
     def _run_slam_video(self, *_):
-        if not self.local_video or not os.path.exists(self.local_video):
-            self._set_status("Selecciona primero un video válido.")
-            return
-        if self.runner.running:
-            # Evita procesar video y SLAM vivo a la vez
-            self._stop_slam()
+        APP_LOG.info("UI: Ejecutar SLAM (video) (click)")
+        try:
+            if not self.local_video or not os.path.exists(self.local_video):
+                self._set_status("Selecciona primero un video válido.")
+                APP_LOG.warning("No hay video válido para procesar.")
+                return
+            if self.runner and self.runner.running:
+                # Evita procesar video y SLAM vivo a la vez
+                APP_LOG.info("Deteniendo SLAM vivo antes de video…")
+                self._stop_slam()
 
-        self.btn_run_video.disabled = True
-        self.video_running = True
-        self._set_status("Procesando SLAM (video)…")
-        # hilo ligero
-        import threading
-        self.video_thread = threading.Thread(target=self._worker_video, daemon=True)
-        self.video_thread.start()
+            self.btn_run_video.disabled = True
+            self.video_running = True
+            self._set_status("Procesando SLAM (video)…")
+
+            self.video_thread = threading.Thread(target=self._worker_video, name="SLAM-Video", daemon=True)
+            self.video_thread.start()
+        except Exception as e:
+            APP_LOG.exception(f"_run_slam_video error: {e}")
+            self._set_status(f"Error: {e}")
 
     def _worker_video(self):
+        APP_LOG.info(f"[Video] Worker iniciado. Archivo={self.local_video}")
         try:
             from slam_core import PoseGraphSLAM
             slam = PoseGraphSLAM()
             t0 = time.time()
             slam.process_video_input(self.local_video)
             elapsed = time.time() - t0
+            APP_LOG.info(f"[Video] SLAM finalizó en {elapsed:.2f}s")
 
-            # Toma el PNG más reciente 
-            pngs = sorted(
-                glob.glob(os.path.join("resultados", "**", "*.png"), recursive=True),
-                key=os.path.getmtime
-            )
+            # Toma el PNG más reciente (de cualquier subcarpeta de resultados)
+            try:
+                pngs = sorted(
+                    glob.glob(os.path.join("resultados", "**", "*.png"), recursive=True),
+                    key=os.path.getmtime
+                )
+            except Exception as e:
+                APP_LOG.warning(f"[Video] glob resultados/*.png falló: {e}")
+                pngs = []
+
+            # También intenta en /sdcard/Download/slam_logs/plots
+            try:
+                pngs_sd = sorted(
+                    glob.glob("/sdcard/Download/slam_logs/plots/**/*.png", recursive=True),
+                    key=os.path.getmtime
+                )
+                if pngs_sd:
+                    pngs = (pngs or []) + pngs_sd
+                    pngs = sorted(set(pngs), key=os.path.getmtime)
+            except Exception as e:
+                APP_LOG.warning(f"[Video] glob plots/*.png falló: {e}")
+
             last_png = pngs[-1] if pngs else None
             if last_png:
                 Clock.schedule_once(lambda dt: self._show_result(last_png, elapsed), 0)
+                APP_LOG.info(f"[Video] PNG mostrado: {last_png}")
             else:
-                Clock.schedule_once(lambda dt: self._set_status("No se encontró PNG; revisa CSV/logs."), 0)
+                msg = "No se encontró PNG; revisa CSV/logs."
+                Clock.schedule_once(lambda dt: self._set_status(msg), 0)
+                APP_LOG.warning(f"[Video] {msg}")
         except Exception as e:
+            APP_LOG.exception(f"[Video] Error procesando SLAM: {e}")
             msg = f"{type(e).__name__}: {e}"
             Clock.schedule_once(lambda dt: self._set_status(f"Error: {msg}"), 0)
         finally:
             self.video_running = False
             Clock.schedule_once(lambda dt: self._enable_video_btn(), 0)
+            APP_LOG.info("[Video] Worker finalizó (cleanup).")
 
     def _show_result(self, path, elapsed):
-        self.preview.source = path
-        self.preview.reload()
-        self._set_status(f"Listo: trayectoria generada (video). (t={elapsed:.1f}s)")
+        try:
+            self.preview.source = path
+            self.preview.reload()
+            self._set_status(f"Listo: trayectoria generada (video). (t={elapsed:.1f}s)")
+            APP_LOG.info(f"Preview actualizado desde video -> {path}")
+        except Exception as e:
+            APP_LOG.exception(f"_show_result error: {e}")
 
     def _enable_video_btn(self):
         self.btn_run_video.disabled = False
 
     # ========== util ==========
     def _refresh_preview(self, path):
-        self.preview.source = path
-        self.preview.reload()
+        try:
+            if not path or not os.path.exists(path):
+                APP_LOG.warning(f"_refresh_preview: archivo no existe -> {path}")
+            self.preview.source = path
+            self.preview.reload()
+            APP_LOG.info(f"Preview actualizado -> {path}")
+        except Exception as e:
+            APP_LOG.exception(f"_refresh_preview error: {e}")
 
     def _set_status(self, txt):
-        self.status.text = txt
+        try:
+            self.status.text = txt
+            APP_LOG.info(f"STATUS: {txt}")
+        except Exception as e:
+            APP_LOG.exception(f"_set_status error: {e}")
 
 
 class SLAMMobileApp(App):
     title = "SLAM Mobile"
+
     def build(self):
-        return Root()
+        APP_LOG.info("App.build()")
+        root = Root()
+        APP_LOG.info("UI construida correctamente.")
+        return root
+
+    def on_start(self):
+        APP_LOG.info("App.on_start()")
+
     def on_stop(self):
-        root = self.root
-        if hasattr(root, 'runner') and root.runner.running:
-            root.runner.stop()
+        APP_LOG.info("App.on_stop(): iniciando cleanup…")
+        try:
+            root = self.root
+
+            # Cancelar intervalos para evitar callbacks tardíos
+            for ev_name in ("_ev_tick", "_ev_grab"):
+                ev = getattr(root, ev_name, None)
+                if ev is not None:
+                    try:
+                        ev.cancel()
+                        APP_LOG.info(f"ClockEvent cancelado: {ev_name}")
+                    except Exception as e:
+                        APP_LOG.warning(f"No se pudo cancelar {ev_name}: {e}")
+
+            # Detener runner si seguía activo
+            if hasattr(root, 'runner') and root.runner and root.runner.running:
+                APP_LOG.info("Runner estaba en ejecución, deteniendo…")
+                root.runner.stop()
+                APP_LOG.info("Runner detenido en on_stop().")
+        except Exception as e:
+            APP_LOG.exception(f"on_stop cleanup error: {e}")
+
 
 if __name__ == '__main__':
+    APP_LOG.info(f"Proceso iniciado. Py={sys.version.split()[0]} | plataforma={platform}")
     SLAMMobileApp().run()
+    APP_LOG.info("Proceso finalizado.")

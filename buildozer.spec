@@ -37,7 +37,7 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy,numpy,opencv,androidstorage4kivy,camera4kivy,gestures4kivy
+requirements = python3,kivy,numpy,opencv,androidstorage4kivy,camera4kivy,gestures4kivy,pyjnius
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -180,6 +180,22 @@ android.ndk_api = 24
 # (list) List of Java files to add to the android project (can be java or a
 # directory containing the files)
 #android.add_src =
+
+
+
+# --- NO STRIP: conserva símbolos nativos (tamaños más grandes, pero trazas útiles) ---
+android.strip = False
+
+# --- Pasar args extra a python-for-android (por si tu buildozer los respeta) ---
+# --no-strip evita que p4a quite símbolos; --debug compila en modo debug donde aplique
+android.add_arguments = --no-strip --debug
+
+# --- Variables de entorno dentro de la app (runtime) ---
+# Kivy más verboso, Python sin buffer (flush inmediato), logs de jnius, OpenCV a fichero
+# (Kivy leerá KIVY_LOG_LEVEL=debug; PyJNIUS imprimirá attach/detach de hilos y llamadas)
+# OpenCV escribirá logs en /sdcard/Download/slam_logs/opencv.log
+# OJO: si tu buildozer no soporta 'environment', haz lo del punto 2 en código.
+environment = KIVY_LOG_LEVEL=debug, PYTHONUNBUFFERED=1, PYJNIUS_LOGLEVEL=DEBUG, OPENCV_LOG_LEVEL=DEBUG, OPENCV_LOG_FILE=/sdcard/Download/slam_logs/opencv.log
 
 # (list) Android AAR archives to add
 #android.add_aars =
