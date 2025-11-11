@@ -8,220 +8,28 @@ from collections import deque
 import threading
 from pathlib import Path
 import shutil
-import sys
-import atexit
+import gc
+import logging
+import traceback
+import json
+import math
+import sys, os
+sys.path.append(os.path.dirname(__file__))
+import slam_utils as su
+from slam_utils import _log, _LOG, _IMU_LOG
 import faulthandler
 import signal
-import gc
-import random
 
-# --- OpenCV: evitar carreras internas en Android y SIMD raras ---
+# Monitor de desempeño (CPU/RAM/Batería) 
 try:
-    cv2.setNumThreads(1)
+    from android_perf import PerfMonitor
 except Exception:
-    pass
-try:
-    cv2.ocl.setUseOpenCL(False)
-except Exception:
-    pass
-try:
-    cv2.setUseOptimized(False)
-except Exception:
-    pass
+    PerfMonitor = None
 
-# =============================================================================
-#  LOGGING A ARCHIVO + KIVY (flush inmediato y bloqueos para evitar races)
-# =============================================================================
 
-_FILE_LOG_FH = None
-_FILE_LOG_PATH = None
-_CRASH_LOG_FH = None
-_CRASH_LOG_PATH = None
-_LOG_LOCK = threading.RLock()  # serializa escrituras
-
-def _safe_flush(fh):
-    try:
-        fh.flush()
-    except Exception:
-        pass
-
-def _ensure_file_logger():
-    global _FILE_LOG_FH, _FILE_LOG_PATH
-    if _FILE_LOG_FH is not None:
-        return
-    logs_dir = _get_downloads_slam_logs_dir()
-    if not logs_dir:
-        logs_dir = os.path.join("resultados", "logs")
-        try:
-            os.makedirs(logs_dir, exist_ok=True)
-        except Exception:
-            pass
-    try:
-        os.makedirs(logs_dir, exist_ok=True)
-    except Exception:
-        pass
-    _FILE_LOG_PATH = os.path.join(logs_dir, "slam_core.log")
-    try:
-        _FILE_LOG_FH = open(_FILE_LOG_PATH, "a", buffering=1, encoding="utf-8", errors="replace")
-        with _LOG_LOCK:
-            _FILE_LOG_FH.write("\n=== slam_core logger abierto ===\n")
-            _safe_flush(_FILE_LOG_FH)
-    except Exception:
-        _FILE_LOG_FH = None
-        _FILE_LOG_PATH = None
-
-def _log(msg):
-    try:
-        from kivy.logger import Logger
-        Logger.info(f"SLAM        ] {msg}")
-    except Exception:
-        print(f"[SLAM        ] {msg}")
-    try:
-        if _FILE_LOG_FH is None:
-            _ensure_file_logger()
-        if _FILE_LOG_FH is not None:
-            ts = time.strftime("%H:%M:%S")
-            thr = threading.current_thread().name
-            with _LOG_LOCK:
-                _FILE_LOG_FH.write(f"{ts} | {thr} | {msg}\n")
-                _safe_flush(_FILE_LOG_FH)
-    except Exception:
-        pass
-
-def _install_fault_handlers():
-    global _CRASH_LOG_FH, _CRASH_LOG_PATH
-    try:
-        logs_dir = _get_downloads_slam_logs_dir() or os.path.join("resultados", "logs")
-        os.makedirs(logs_dir, exist_ok=True)
-        _CRASH_LOG_PATH = os.path.join(logs_dir, "slam_core_crash.log")
-        _CRASH_LOG_FH = open(_CRASH_LOG_PATH, "a", buffering=1, encoding="utf-8", errors="replace")
-        faulthandler.enable(file=_CRASH_LOG_FH, all_threads=True)
-        for sig in (signal.SIGABRT, signal.SIGSEGV, signal.SIGILL, signal.SIGFPE):
-            try:
-                faulthandler.register(sig, file=_CRASH_LOG_FH, all_threads=True)
-            except Exception:
-                pass
-        _log(f"Faulthandler instalado en: {_CRASH_LOG_PATH}")
-    except Exception as e:
-        _log(f"Faulthandler no disponible: {e}")
-
-def _on_exit_flush():
-    try:
-        with _LOG_LOCK:
-            if _FILE_LOG_FH is not None:
-                _FILE_LOG_FH.write("Proceso finalizando (atexit).\n")
-                _safe_flush(_FILE_LOG_FH)
-    except Exception:
-        pass
-    try:
-        if _FILE_LOG_FH is not None:
-            _FILE_LOG_FH.close()
-    except Exception:
-        pass
-    try:
-        if _CRASH_LOG_FH is not None:
-            _CRASH_LOG_FH.close()
-    except Exception:
-        pass
-
-atexit.register(_on_exit_flush)
-
-# =============================================================================
-#  HELPERS DE PLATAFORMA / ANDROID
-# =============================================================================
-
-def _is_android():
-    try:
-        from kivy.utils import platform
-        return platform == "android"
-    except Exception:
-        return "ANDROID_ARGUMENT" in os.environ
-
-_ANDROID_IMU_OK = False
-if _is_android():
-    try:
-        from jnius import autoclass, PythonJavaClass, java_method, cast
-        _ANDROID_IMU_OK = True
-    except Exception:
-        _ANDROID_IMU_OK = False
-
-def _ensure_live_preview():
-    try:
-        os.makedirs("resultados/live", exist_ok=True)
-        p = "resultados/live/preview.png"
-        if not os.path.exists(p):
-            cv2.imwrite(p, np.full((4, 4, 3), 255, np.uint8))
-            _log(f"Created live preview: {os.path.abspath(p)}")
-    except Exception as e:
-        _log(f"Failed to create live preview: {e}")
-
-def _android_get_downloads_dirs():
-    if not _is_android():
-        return (None, None)
-    public_dir = None
-    app_dir = None
-    try:
-        if _ANDROID_IMU_OK:
-            PythonActivity = autoclass('org.kivy.android.PythonActivity')
-            activity = PythonActivity.mActivity
-            Environment = autoclass('android.os.Environment')
-            try:
-                public_file = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                if public_file is not None:
-                    public_dir = public_file.getAbsolutePath()
-            except Exception:
-                pass
-            try:
-                file_obj = activity.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-                if file_obj is not None:
-                    app_dir = file_obj.getAbsolutePath()
-            except Exception:
-                pass
-        if public_dir is None:
-            maybe = "/sdcard/Download"
-            if os.path.isdir(maybe):
-                public_dir = maybe
-    except Exception as e:
-        _log(f"Downloads dir query failed: {e}")
-    return (public_dir, app_dir)
-
-def _get_downloads_slam_logs_dir():
-    public_dir, app_dir = _android_get_downloads_dirs()
-    root = public_dir or app_dir
-    if not root:
-        return None
-    target = os.path.join(root, "slam_logs")
-    try:
-        os.makedirs(target, exist_ok=True)
-        return target
-    except Exception as e:
-        _log(f"No se pudo crear {target}: {e}")
-        return None
-
-_ensure_file_logger()
-_install_fault_handlers()
-if _FILE_LOG_PATH:
-    _log(f"Logger de archivo listo en: {_FILE_LOG_PATH}")
-else:
-    _log("Logger de archivo NO disponible, se usará solo consola/Kivy.")
-
-# =============================================================================
-#  UTILIDADES SO(3)/SE(2)
-# =============================================================================
-
-def _so3_log(R):
-    rvec, _ = cv2.Rodrigues(R)
-    return rvec.reshape(3)
-
-def _so3_exp(w):
-    R, _ = cv2.Rodrigues(np.asarray(w).reshape(3, 1))
-    return R
-
-def _so3_interpolate(Ra, Rb, alpha=0.5):
-    alpha = float(np.clip(alpha, 0.0, 1.0))
-    R_err = Ra.T @ Rb
-    r = _so3_log(R_err)
-    return Ra @ _so3_exp(alpha * r)
+# ==============================
+#  Utilidades de rotaciones
+# ==============================
 
 def _Ry(yaw):
     c, s = np.cos(yaw), np.sin(yaw)
@@ -229,203 +37,438 @@ def _Ry(yaw):
                      [0., 1., 0.],
                      [-s, 0., c]], dtype=float)
 
-def _yaw_from_Ry(R):
-    return float(np.arctan2(R[0, 2], R[2, 2]))
-
 def _wrap_pi(a):
     return (float(a) + np.pi) % (2*np.pi) - np.pi
 
-# =============================================================================
-#  ANDROID IMU (GYRO + ACC) — parche: cast correcto + start/stop seguros
-# =============================================================================
+def _yaw_from_Ry(R):
+    return float(np.arctan2(R[0, 2], R[2, 2]))
 
-class _AndroidIMU:
-    def __init__(self, maxlen=1024, gyro_bias_alpha=0.0007):
-        self.enabled = False
-        self.has_java = _ANDROID_IMU_OK
 
-        self.R_global = np.eye(3, dtype=float)
-        self._last_gyro_t = None
-        self._t0_ns = None
-        self._t0_py = None
-        self._gyro_bias = np.zeros(3, dtype=float)
-        self._bias_alpha = float(gyro_bias_alpha)
+# ==============================
+#  Lector IMU (plyer) + calib sesgo
+# ==============================
+
+class IMUReader:
+    """
+    Lector simple basado en plyer 
+    - Estima sesgo del giroscopio durante estado estacionario al inicio.
+    - Guarda colas recientes para detección de quietud (ZUPT) y calidad.
+    - Diseñado para Android/Kivy; en escritorio puede no devolver datos.
+
+    Instrumentación:
+    - Logs de frecuencia efectiva, varianzas, actualizaciones de sesgo y quietud.
+    """
+    def __init__(self, hz=100, maxlen=1024, bias_alpha=0.0015):
+        self.hz = int(max(20, hz))
+        self.dt = 1.0 / float(self.hz)
+        self.bias_alpha = float(bias_alpha)
+        self._bias = np.zeros(3, dtype=float)
+        self._bias_ready = False
 
         self.gyro_q = deque(maxlen=maxlen)
         self.acc_q  = deque(maxlen=maxlen)
 
-        self._listener = None              # Python proxy
-        self._java_listener = None         # cast a SensorEventListener (JNI firma correcta)
-        self._sm = None
-        self._registered = False
-        self._running = False
-
-        self._last_frame_R = np.eye(3, dtype=float)
-
-        self.gyro_stationary = 0.02
-        self.acc_stationary  = 0.20
-
         self._lock = threading.RLock()
-        self._gyro_events = 0
-        self._acc_events = 0
-        self._last_debug_t = 0.0
+        self._running = False
+        self._thr = None
 
-        if self.has_java:
+        # Estado de orientación (SO(3))
+        self._R_global = np.eye(3, dtype=float)
+        self._last_t = None
+
+        # --- Tilt compensation (roll/pitch) state (lightweight) ---
+        self._g_lp = np.array([0., 0., 9.81], dtype=float)
+        self._alpha_rp = 0.02  # 0.01–0.05 typical
+        self._roll = 0.0
+        self._pitch = 0.0
+
+        # Umbrales de quietud (rad/s y |a|≈g)
+        self.gyro_stationary = 0.02
+        self.acc_stationary  = 0.25
+
+        # Throttling de logs de alto volumen
+        self._tick = 0
+        self._log_every = int(max(1, self.hz // 2))  # ~2 veces por segundo
+
+        # Carga de plyer
+        try:
+            from plyer import accelerometer, gyroscope
+            self._accel = accelerometer
+            self._gyro  = gyroscope
             try:
-                self._start()
-                self.enabled = True
-                _log("IMU Java listener registered.")
-            except Exception as e:
-                self.has_java = False
-                _log(f"IMU init failed: {e}")
-        else:
-            _log("IMU Java bridge not available.")
+                self._accel.enable()
+                _IMU_LOG.info("Acelerómetro habilitado.")
+            except Exception as ee:
+                _IMU_LOG.warning(f"No se pudo habilitar acelerómetro: {ee}")
+            try:
+                self._gyro.enable()
+                _IMU_LOG.info("Giroscopio habilitado.")
+            except Exception as ee:
+                _IMU_LOG.warning(f"No se pudo habilitar giroscopio: {ee}")
 
-    def _start(self):
-        PythonActivity = autoclass('org.kivy.android.PythonActivity')
-        activity = PythonActivity.mActivity
-        Context = autoclass('android.content.Context')
-        SensorManager = autoclass('android.hardware.SensorManager')
-        Sensor = autoclass('android.hardware.Sensor')
-        self._sm = cast('android.hardware.SensorManager',
-                        activity.getSystemService(Context.SENSOR_SERVICE))
-        gyro = self._sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-        acc  = self._sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-
-        outer = self
-
-        class _Listener(PythonJavaClass):
-            __javainterfaces__ = ['android/hardware/SensorEventListener']
-            __javacontext__ = 'app'
-
-            @java_method('(Landroid/hardware/SensorEvent;)V')
-            def onSensorChanged(self, event):
-                # Cortar inmediatamente si ya no corremos para evitar eventos tardíos durante stop
-                if not outer.enabled or not outer._running:
-                    return
-                try:
-                    stype = event.sensor.getType()
-                    ts_ns = int(event.timestamp)
-                    vx = float(event.values[0]); vy = float(event.values[1]); vz = float(event.values[2])
-                except Exception:
-                    return
-                if outer._t0_ns is None:
-                    outer._t0_ns = ts_ns
-                    outer._t0_py = time.time()
-                t_py = outer._t0_py + (ts_ns - outer._t0_ns) * 1e-9
-                if stype == Sensor.TYPE_GYROSCOPE:
-                    outer._on_gyro(t_py, vx, vy, vz)
-                elif stype == Sensor.TYPE_ACCELEROMETER:
-                    outer._on_acc(t_py, vx, vy, vz)
-
-            @java_method('(Landroid/hardware/Sensor;I)V')
-            def onAccuracyChanged(self, sensor, accuracy):
-                pass
-
-        # Crear listener y castear a la interfaz exacta para fijar la sobrecarga JNI
-        self._listener = _Listener()
-        self._java_listener = cast('android.hardware.SensorEventListener', self._listener)
-
-        # Registrar usando SIEMPRE el objeto casteado
-        self._sm.registerListener(self._java_listener, gyro, SensorManager.SENSOR_DELAY_GAME)
-        self._sm.registerListener(self._java_listener, acc,  SensorManager.SENSOR_DELAY_GAME)
-        self._registered = True
-        self._running = True
-        _log("IMU register: gyro=True acc=True")
+            self._running = True
+            self._thr = threading.Thread(target=self._poll_loop, name="IMUReader", daemon=True)
+            self._thr.start()
+            _IMU_LOG.info(f"IMUReader ON @ {self.hz} Hz")
+        except Exception as e:
+            self._accel = None
+            self._gyro  = None
+            _IMU_LOG.error(f"IMUReader OFF (plyer no disponible): {e}")
 
     def stop(self):
-        # seguro contra llamadas repetidas
-        if not self.enabled:
-            return
         self._running = False
         try:
-            if self._registered and self._sm is not None and self._java_listener is not None:
+            if self._gyro:  self._gyro.disable()
+            if self._accel: self._accel.disable()
+            _IMU_LOG.info("Sensores IMU deshabilitados.")
+        except Exception as e:
+            _IMU_LOG.warning(f"No se pudieron deshabilitar sensores: {e}")
+
+    def _poll_loop(self):
+        last_rate_log_t = time.time()
+        sample_counter = 0
+        while self._running:
+            try:
+                t = time.time()
+
+                # gyro
+                gx = gy = gz = None
                 try:
-                    # Forzar la firma correcta: unregisterListener(SensorEventListener)
-                    self._sm.unregisterListener(self._java_listener)
-                    _log("IMU listener unregistered (SensorEventListener).")
+                    rot = self._gyro.rotation if self._gyro else None
+                    if rot:
+                        gx, gy, gz = rot
                 except Exception as e:
-                    _log(f"IMU unregister error: {e}")
-            self._registered = False
-        finally:
-            self.enabled = False
+                    _IMU_LOG.debug(f"Lectura gyro falló: {e}")
 
-    def _on_gyro(self, t_py, wx, wy, wz):
-        with self._lock:
-            self._gyro_events += 1
-            g = np.array([wx, wy, wz], dtype=float)
-            self._gyro_bias = (1.0 - self._bias_alpha) * self._gyro_bias + self._bias_alpha * g
-            g = g - self._gyro_bias
-            if self._last_gyro_t is None:
-                self._last_gyro_t = t_py
-            dt = float(max(0.0, t_py - self._last_gyro_t))
-            self._last_gyro_t = t_py
-            dR = _so3_exp(g * dt)
-            self.R_global = self.R_global @ dR
-            self.gyro_q.append((t_py, g[0], g[1], g[2]))
-            first = self._gyro_events in (1,2,3)
-            periodic = (t_py - self._last_debug_t > 2.0)
-            if periodic:
-                self._last_debug_t = t_py
-                Rnorm = np.linalg.norm(self.R_global - np.eye(3))
-        if 'first' in locals() and first:
-            _log(f"IMU gyro streaming... event#{self._gyro_events} dt={dt:.4f} rad/s={np.linalg.norm(g):.4f}")
-        if 'periodic' in locals() and periodic:
-            _log(f"IMU events: gyro={self._gyro_events}, acc={self._acc_events} | R_norm={Rnorm:.4e}")
+                # acc
+                ax = ay = az = None
+                try:
+                    acc = self._accel.acceleration if self._accel else None
+                    if acc:
+                        ax, ay, az = acc
+                except Exception as e:
+                    _IMU_LOG.debug(f"Lectura accel falló: {e}")
 
-    def _on_acc(self, t_py, ax, ay, az):
-        with self._lock:
-            self._acc_events += 1
-            self.acc_q.append((t_py, float(ax), float(ay), float(az)))
+                with self._lock:
+                    if gx is not None and gy is not None and gz is not None:
+                        g = np.array([float(gx), float(gy), float(gz)], dtype=float)
 
-    def get_relative_rotation_since_last(self):
-        with self._lock:
-            R_now = self.R_global.copy()
-            R_rel = self._last_frame_R.T @ R_now
-            self._last_frame_R = R_now
-        return R_rel
+                        # Calibración de sesgo cuando el dispositivo está quieto
+                        if self._is_stationary_locked(now=t, gyro=g, acc=(ax, ay, az)):
+                            old_bias = self._bias.copy()
+                            self._bias = (1.0 - self.bias_alpha) * self._bias + self.bias_alpha * g
+                            self._bias_ready = True
+                            if np.linalg.norm(self._bias - old_bias) > 1e-6:
+                                _IMU_LOG.debug(f"Bias actualizado -> {self._bias}")
 
-    def is_stationary(self, window=0.35):
-        with self._lock:
-            gyro_list = list(self.gyro_q)
-            acc_list  = list(self.acc_q)
-        if not acc_list or not gyro_list:
+                        g = g - self._bias
+                        self.gyro_q.append((t, g[0], g[1], g[2]))
+
+                        # Integración simple para mantener una rotación global aproximada
+                        if self._last_t is None:
+                            self._last_t = t
+                        dt = max(0.0, t - self._last_t)
+                        self._last_t = t
+
+                        
+                        theta = np.linalg.norm(g) * dt
+                        if theta > 0.0:
+                            k = g / max(1e-9, np.linalg.norm(g))
+                            K = np.array([[0,-k[2],k[1]],[k[2],0,-k[0]],[-k[1],k[0],0]], dtype=float)
+                            dR = np.eye(3) + np.sin(theta)*K + (1-np.cos(theta))*(K@K)
+                            self._R_global = self._R_global @ dR
+
+                    if ax is not None and ay is not None and az is not None:
+                        self.acc_q.append((t, float(ax), float(ay), float(az)))
+
+                # Estadísticas de tasa de muestreo (1 Hz aprox)
+                sample_counter += 1
+                if (t - last_rate_log_t) >= 1.0:
+                    rate, varm = self.quality(window=0.8)
+                    _IMU_LOG.info(f"Tasa={rate:.1f} Hz, Var|gyro|={varm:.6f}, bias_ready={self._bias_ready}")
+                    last_rate_log_t = t
+                    sample_counter = 0
+
+            except Exception as loope:
+                _IMU_LOG.error(f"_poll_loop error: {loope}\n{traceback.format_exc()}")
+
+            time.sleep(self.dt)
+
+    def _is_stationary_locked(self, now=None, gyro=None, acc=None, window=0.4):
+        # Requiere lock tomado
+        t_now = now if now is not None else (self.acc_q[-1][0] if self.acc_q else None)
+        if t_now is None:
             return False
-        t_now = acc_list[-1][0]
-        recent_g = [np.linalg.norm([gx, gy, gz]) for (t, gx, gy, gz) in gyro_list if t_now - t <= window]
-        recent_a = [np.array([ax, ay, az]) for (t, ax, ay, az) in acc_list if t_now - t <= window]
-        if len(recent_g) < 3 or len(recent_a) < 3:
-            return False
-        if float(np.mean(recent_g)) > self.gyro_stationary:
-            return False
-        mags = [np.linalg.norm(v) for v in recent_a]
-        return abs(float(np.mean(mags)) - 9.81) < self.acc_stationary
+        # Gyro
+        if gyro is None:
+            glist = [np.linalg.norm([gx, gy, gz]) for (t, gx, gy, gz) in self.gyro_q if t_now - t <= window]
+            if len(glist) < 3 or float(np.mean(glist)) > self.gyro_stationary:
+                return False
+        else:
+            if np.linalg.norm(gyro) > self.gyro_stationary:
+                return False
+        # Acc
+        if acc is None:
+            alist = [np.linalg.norm([ax, ay, az]) for (t, ax, ay, az) in self.acc_q if t_now - t <= window]
+            if len(alist) < 3 or abs(float(np.mean(alist)) - 9.81) > self.acc_stationary:
+                return False
+        else:
+            if any(a is None for a in acc):
+                return False
+            if abs(np.linalg.norm(acc) - 9.81) > self.acc_stationary:
+                return False
+        return True
 
-# =============================================================================
-#  SLAM (incremental)
-# =============================================================================
+    def is_stationary(self, window=0.4):
+        with self._lock:
+            st = self._is_stationary_locked(window=window)
+        _IMU_LOG.debug(f"is_stationary({window}) -> {st}")
+        return st
+
+    def quality(self, window=0.5):
+        """Devuelve (rate_hz, var|gyro|) en ventana, para gating de fusión."""
+        with self._lock:
+            data = list(self.gyro_q)
+        if not data:
+            return 0.0, float('inf')
+        t_now = data[-1][0]
+        recent = [(t, np.linalg.norm([gx, gy, gz])) for (t, gx, gy, gz) in data if t_now - t <= window]
+        n = len(recent)
+        if n < 3:
+            return 0.0, float('inf')
+        times = [t for (t, _) in recent]
+        mags  = [m for (_, m) in recent]
+        dt = max(1e-6, (max(times) - min(times)))
+        rate = n / max(dt, 1e-3)
+        varm = float(np.var(mags))
+        return rate, varm
+
+    def yaw_rate(self):
+        """Devuelve la última velocidad angular *aprox sobre el eje 'yaw'* del teléfono
+        Usamos gz asumiendo teléfono en orientación vertical típica
+        Si no hay datos, devuelve None."""
+        with self._lock:
+            if not self.gyro_q:
+                return None, None
+            t, gx, gy, gz = self.gyro_q[-1]
+        return t, float(gz)
+
+    def _update_tilt(self, ax, ay, az):
+        if ax is None or ay is None or az is None:
+            return
+        a = np.array([float(ax), float(ay), float(az)], dtype=float)
+        self._g_lp = (1.0 - self._alpha_rp) * self._g_lp + self._alpha_rp * a
+        g = self._g_lp / (np.linalg.norm(self._g_lp) + 1e-9)
+        self._roll = float(np.arctan2(g[1], g[2]))
+        self._pitch = float(-np.arcsin(np.clip(g[0], -1.0, 1.0)))
+
+    def yaw_rate_world(self):
+        with self._lock:
+            if not self.gyro_q:
+                return None, None
+            t, gx, gy, gz = self.gyro_q[-1]
+            roll = getattr(self, "_roll", 0.0)
+            pitch = getattr(self, "_pitch", 0.0)
+
+        cr, sr = np.cos(roll), np.sin(roll)
+        cp, sp = np.cos(pitch), np.sin(pitch)
+        
+
+        R31 = -sp; R32 = cp * sr; R33 = cp * cr
+        wz_world = R31 * gx + R32 * gy + R33 * gz
+        return t, float(wz_world)
+
+    def drain_yaw_world_since(self, t_after):
+        with self._lock:
+            data = list(self.gyro_q)
+            roll = getattr(self, "_roll", 0.0)
+            pitch = getattr(self, "_pitch", 0.0)
+        if not data:
+            return []
+        cr, sr = np.cos(roll), np.sin(roll)
+        cp, sp = np.cos(pitch), np.sin(pitch)
+        R31 = -sp; R32 = cp * sr; R33 = cp * cr
+        out = []
+        for (t, gx, gy, gz) in data:
+            if (t_after is None) or (t > t_after):
+                wz_world = R31 * gx + R32 * gy + R33 * gz
+                out.append((t, float(wz_world)))
+        return out
+
+
+# ==============================
+#  EKF 1D para yaw (estado = [yaw, bias])
+# ==============================
+
+class YawEKF:
+    """
+    Filtro de Kalman extendido 1D:
+      x = [yaw, b]^T
+      f: yaw_k+1 = yaw_k + (w_gz - b) * dt
+         b_k+1   = b_k  (random walk, q_b pequeño)
+      z (VO): yaw_vo = yaw + v
+
+    Corrige drift del giroscopio con medidas de yaw de VO cuando están disponibles.
+
+    Instrumentación:
+    - Logs de predicción (dt, gyro_z), actualización (innovación, gating) y estado.
+    """
+    def __init__(self, q_yaw=2e-3, q_bias=1e-5, r_vo=np.deg2rad(2.0)**2):
+        self.x = np.zeros((2,1), dtype=float)  # [yaw, bias]
+        self.P = np.diag([1e-2, 1e-3]).astype(float)  # var inicial moderada
+        self.Q = np.diag([q_yaw, q_bias]).astype(float)
+        self.R = np.array([[r_vo]], dtype=float)
+        self._last_t = None
+
+    def last_time(self):
+        return self._last_t
+
+    def predict_many(self, seq):
+        for (t, wz) in seq:
+            self.predict(t, wz)
+
+    def predict(self, t, gyro_z):
+        if self._last_t is None:
+            self._last_t = t
+            _LOG.debug("EKF predict primer tick (sin avance).")
+            return
+        dt = max(1e-5, float(t - self._last_t))
+        self._last_t = t
+
+        yaw, b = float(self.x[0,0]), float(self.x[1,0])
+        yaw = yaw + (float(gyro_z) - b) * dt
+
+        F = np.array([[1.0, -dt],
+                      [0.0,  1.0]], dtype=float)
+
+        self.x = np.array([[yaw],[b]], dtype=float)
+        self.P = F @ self.P @ F.T + self.Q
+        self.x[0,0] = _wrap_pi(self.x[0,0])
+        _LOG.debug(f"EKF predict dt={dt:.4f}, gyro_z={gyro_z:.5f} -> yaw={self.x[0,0]:.4f}, bias={self.x[1,0]:.6f}")
+
+    def update_vo(self, yaw_vo, r=None, gate_deg=15.0):
+        if r is None:
+            Rmeas = self.R
+        else:
+            Rmeas = np.array([[float(r)]], dtype=float)
+
+        dy = _wrap_pi(float(yaw_vo) - float(self.x[0,0]))
+        if abs(dy) > np.deg2rad(float(gate_deg)):
+            _LOG.debug(f"EKF update_vo GATE: |innov|={np.rad2deg(abs(dy)):.2f}° > {gate_deg}° -> descartar VO.")
+            return
+
+        H = np.array([[1.0, 0.0]], dtype=float)
+        S = H @ self.P @ H.T + Rmeas
+        K = (self.P @ H.T) @ np.linalg.inv(S)
+        y = np.array([[dy]], dtype=float)
+        self.x = self.x + K @ y
+        self.P = (np.eye(2) - K @ H) @ self.P
+        self.x[0,0] = _wrap_pi(self.x[0,0])
+        _LOG.debug(f"EKF update_vo innov={np.rad2deg(dy):.2f}°, R={float(Rmeas[0,0]):.6f} -> yaw={self.x[0,0]:.4f}, bias={self.x[1,0]:.6f}")
+
+    @property
+    def yaw(self):
+        return float(self.x[0,0])
+
+    @property
+    def bias(self):
+        return float(self.x[1,0])
+
+
+# ==============================
+#  Bandit ligero (UCB1) para seleccionar params VO/IMU
+# ==============================
+
+class LightBandit:
+    def __init__(self, k, c=1.4, ewma_lambda=0.05, ewma_mix=0.5):
+        self.k = int(k)
+        self.c = float(c)
+        self.counts = [0] * self.k
+        self.values = [0.0] * self.k   # promedio incremental
+        self.ewma = [0.0] * self.k     # media exponencial (suaviza no-estacionariedad)
+        self.total = 0
+        self.ewma_lambda = float(ewma_lambda)  # ~0.05
+        self.ewma_mix = float(ewma_mix)        # mezcla entre Q y EWMA en selección
+
+    def _eff_Q(self, a):
+        # combinación convexa entre Q (promedio) y EWMA (reciente)
+        return (1.0 - self.ewma_mix) * self.values[a] + self.ewma_mix * self.ewma[a]
+
+    def select(self):
+        # UCB1 con Q efectivo
+        self.total += 1
+        for a in range(self.k):
+            if self.counts[a] == 0:
+                return a, float('inf')
+        import math as _m
+        ln_t = _m.log(max(2, self.total))
+        best_a, best_ucb = 0, -1e9
+        for a in range(self.k):
+            Qe = self._eff_Q(a)
+            bonus = self.c * (_m.sqrt(ln_t / max(1, self.counts[a])))
+            u = Qe + bonus
+            if u > best_ucb:
+                best_ucb, best_a = u, a
+        return best_a, best_ucb
+
+    def update(self, a, r):
+        a = int(a)
+        self.counts[a] += 1
+        n = self.counts[a]
+        q = self.values[a]
+        # promedio incremental clásico
+        self.values[a] = q + (float(r) - q) / float(n)
+        # EWMA (más peso a lo reciente)
+        lam = self.ewma_lambda
+        self.ewma[a] = (1.0 - lam) * self.ewma[a] + lam * float(r)
+
+
+# ==============================
+#  SLAM (VO + fusión yaw IMU-EKF)
+# ==============================
 
 class PoseGraphSLAM:
-    MAX_GOOD_MATCHES = 800  # tope
+    """
+    VO con ORB + recoverPose y fusión de yaw por EKF 1D con IMU:
+    - ZUPT: si el teléfono está quieto, anula delta y permite refinar el sesgo.
+    - Gating por calidad VO (inliers) y gating por calidad IMU (frecuencia/varianza mínima).
 
-    def __init__(self, fx=700, fy=700, cx=320, cy=240, imu_weight=0.12):
-        # Intrinsics
+    Instrumentación:
+    - Logs detallados por cuadro con códigos de razón en early-returns.
+    - CSV de diagnósticos por frame.
+    - Métricas adicionales (fps, dt_ms, distancia acumulada, flags de corrección, etc.)
+    """
+    MAX_GOOD_MATCHES = 800
+
+    def __init__(self, fx=700, fy=700, cx=320, cy=240,
+                 imu_min_rate_hz=40.0, imu_max_var=1.0):
+        # Cámara
         self.fx, self.fy, self.cx, self.cy = fx, fy, cx, cy
-        self.camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float64)
-
-        # ORB + matcher (objetos nuevos por ejecución)
-        self.orb_detector = cv2.ORB_create(nfeatures=1500)
+        self.camera_matrix = np.array(
+            [[fx, 0, cx],
+             [0, fy, cy],
+             [0, 0, 1]], dtype=np.float64
+        )
+        self.orb = cv2.ORB_create(nfeatures=1600)
         self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
 
-        # Trajectory & stats
+        # Estado trayectoria
         self.keyframe_poses = []
-        self.relative_transformations = []
+        self.prev_kf_pts = None
+        self.prev_kf_desc = None
+        self.prev_kf_pose_vo = np.eye(4)
+        self.prev_kf_pose_world = np.eye(4)
+
+        # Métricas de tracking globales
         self.total_successful_frames = 0
         self.total_tracked_matches = 0
-        self.total_translation_magnitude = 0.0
+        self.total_translation_magnitude = 0.0  # distancia acumulada estimada
         self.total_pose_estimations = 0
 
-        # Keyframe policy
+        # Diagnósticos por frame
+        self._diag_rows = []  # dicts por frame
+
+        # Política de keyframe
         self.frame_counter = 0
         self.min_frame_gap = 6
         self.min_keyframe_translation = 0.06
@@ -433,84 +476,90 @@ class PoseGraphSLAM:
         self.min_inlier_ratio = 0.52
         self.min_parallax_px = 1.2
 
-        # Previous KF (guardar solo arrays “puros”)
-        self.previous_keyframe_points = None        # Nx2 float32
-        self.previous_keyframe_descriptors = None   # Mx32 uint8 (contiguo)
-        self.previous_keyframe_pose_vo = np.eye(4)
-        self.previous_keyframe_pose_world = np.eye(4)
-
-        # IMU
-        self.imu_weight = float(np.clip(imu_weight, 0.0, 1.0))
-        self._imu = _is_android() and _AndroidIMU() or None
-        self._imu_on = bool(self._imu and self._imu.enabled)
-        _log(f"IMU state: {'ON' if self._imu_on else 'OFF'} | imu_weight={self.imu_weight}")
-
-        # IMU<->Cam yaw auto-calibration
-        self._yaw_offset = 0.0
-        self._yaw_offset_alpha = 0.08
-        self._calib_ready = False
-
-        # Yaw smoothing
+        # IMU + EKF
+        self.imu = IMUReader(hz=100)
+        self.ekf = YawEKF()
         self._yaw_smooth = None
-        self._yaw_alpha = 0.48
+        self._yaw_alpha = 0.45
+        self.imu_min_rate_hz = float(imu_min_rate_hz)
+        self.imu_max_var = float(imu_max_var)
 
-        # Origin alignment
+        # Origen mundo
         self.world_T_from_vo = np.eye(4)
         self.origin_aligned = False
 
-        # Live preview
+        # Contadores live / debugging
         self._live_every = 10
         self._live_counter = 0
-
-        # Misc
-        self._last_frame_time = None
-        self.last_output_dir = None
-        self.name = Path(__file__).resolve().parent.name
-
-        # Ruta preferida  /sdcard/Download/slam_logs
-        self.download_slam_dir = _get_downloads_slam_logs_dir()
-        if self.download_slam_dir:
-            _log(f"Downloads slam_logs dir: {self.download_slam_dir}")
-        else:
-            _log("Downloads slam_logs dir no disponible (se intentará solo en resultados/).")
-
-        # Ciclo de vida
-        self._closed = False
-
-        _ensure_live_preview()
-
-    # -------- ciclo para segunda ejecución limpia --------
-    def close(self):
-        if self._closed:
-            return
-        self._closed = True
         try:
-            if self._imu_on and self._imu:
-                self._imu.stop()
-        except Exception as e:
-            _log(f"IMU stop in close() error: {e}")
-        # Liberar referencias grandes
-        self.keyframe_poses.clear()
-        self.relative_transformations.clear()
-        self.previous_keyframe_points = None
-        self.previous_keyframe_descriptors = None
-        self.orb_detector = None
-        self.matcher = None
-        gc.collect()
-        _log("PoseGraphSLAM.close(): recursos liberados.")
-
-    def __del__(self):
-        try:
-            self.close()
+            self.name = Path(__file__).resolve().parent.name
         except Exception:
-            pass
+            self.name = "slam"
 
-    # --------------- Matching ----------------
-    def filter_matches_lowe_ratio(self, descriptors1, descriptors2, ratio=0.70):
-        if descriptors1 is None or descriptors2 is None:
+        # CSV de diagnósticos 
+        self._diag_csv_path = None
+
+        # ---- Adaptativos anti-blur / alta velocidad ----
+        self.enable_adaptive_orb = True
+        self.enable_adaptive_ransac = True
+        self.enable_adaptive_ratio = True
+        self.enable_dynamic_parallax = True
+        self._orb_mode = 'normal'
+        self._vo_fail_count = 0
+        self.vo_reboot_N = 18
+
+        # ---- Bandit (UCB1) por contexto ----
+        self.enable_bandit = False
+        self._bandit_cfg = {
+            'normal': [
+                {'name':'N0','ratio':0.70,'ransac':0.70,'min_par':self.min_parallax_px,'orb':'normal'},
+                {'name':'N1','ratio':0.80,'ransac':0.90,'min_par':max(0.95, self.min_parallax_px),'orb':'normal'},
+                {'name':'N2','ratio':0.83,'ransac':1.00,'min_par':0.90,'orb':'fast'},
+            ],
+            'fast': [
+                {'name':'F0','ratio':0.80,'ransac':1.00,'min_par':0.90,'orb':'fast'},
+                {'name':'F1','ratio':0.83,'ransac':1.20,'min_par':0.85,'orb':'fast'},
+                {'name':'F2','ratio':0.75,'ransac':1.00,'min_par':0.85,'orb':'normal'},
+            ],
+        }
+        self._bandit = {'normal': LightBandit(len(self._bandit_cfg['normal']), c=1.4),
+                        'fast':   LightBandit(len(self._bandit_cfg['fast']),   c=1.4)}
+
+        # --- Bandit control / mitigaciones ---
+        self.bandit_arm_cooldown = 20   # frames mínimos entre cambios de brazo
+        self.bandit_orb_cooldown = 35   # frames mínimos entre cambios de ORB
+        self._last_arm_switch = {'normal': -10**9, 'fast': -10**9}
+        self._prev_arm = {'normal': None, 'fast': None}
+        self._last_orb_switch = -10**9
+        self._reward_ma = 0.0
+        self._have_reward_ma = False
+        self.bandit_change_penalty = 0.04   # penalización por cambio de brazo
+        self.orb_change_penalty = 0.05      # penalización adicional si cambia ORB
+        self._safe_arm = {'normal': 'N2', 'fast': 'F1'}  # brazo robusto en caídas VO
+
+        # --- Métricas de rendimiento de frame / FPS (para objetivo #4) ---
+        self._fps_ema = None
+        self._fps_alpha = 0.4  # EMA rápida para FPS promedio visible
+
+        _log("PoseGraphSLAM inicializado.", "INFO")
+
+        # --- Monitor de desempeño ---
+        try:
+            if PerfMonitor is not None:
+                # Deja que android_perf v2 decida la ruta (Downloads/slam_logs)
+                self.perf = PerfMonitor(log_path=None, sample_interval_frames=15)
+            else:
+                self.perf = None
+        except Exception:
+            self.perf = None
+
+    # ----------------- VO helpers -----------------
+
+    def _filter_matches(self, d1, d2, ratio=0.70):
+        if d1 is None or d2 is None:
             return []
-        d1 = np.ascontiguousarray(descriptors1, dtype=np.uint8)
-        d2 = np.ascontiguousarray(descriptors2, dtype=np.uint8)
+        d1 = np.ascontiguousarray(d1, dtype=np.uint8)
+        d2 = np.ascontiguousarray(d2, dtype=np.uint8)
         knn = self.matcher.knnMatch(d1, d2, k=2)
         good = []
         for pair in knn:
@@ -524,20 +573,13 @@ class PoseGraphSLAM:
             good = good[:self.MAX_GOOD_MATCHES]
         return good
 
-    # ---------- Sanitización fuerte de pares ----------
-    def _build_sanitized_pairs(self, matches, prev_pts_array, curr_kps, max_pairs=800):
+    def _pairs(self, matches, prev_pts_array, curr_kps, max_pairs=800):
         if prev_pts_array is None or len(prev_pts_array) == 0 or not curr_kps:
             return None, None
-
         curr_pts = np.array([kp.pt for kp in curr_kps], dtype=np.float32)
         n_prev = int(prev_pts_array.shape[0])
         n_curr = int(curr_pts.shape[0])
-
-        # muestrear por si acaso (evita clusters demasiado grandes)
         mlist = matches[:max_pairs] if matches else []
-        if len(mlist) > max_pairs:
-            mlist = random.sample(mlist, max_pairs)
-
         pp = []
         cc = []
         for m in mlist:
@@ -549,125 +591,14 @@ class PoseGraphSLAM:
                     continue
                 if (abs(p1[0]-p0[0]) + abs(p1[1]-p0[1])) < 1e-6:
                     continue
-                pp.append(p0)
-                cc.append(p1)
+                pp.append(p0); cc.append(p1)
         if not pp:
             return None, None
-
         pts_prev = np.ascontiguousarray(np.asarray(pp, dtype=np.float32))
         pts_curr = np.ascontiguousarray(np.asarray(cc, dtype=np.float32))
-
-        # Eliminar duplicados exactos
-        try:
-            pc = np.hstack([pts_prev, pts_curr])  # Nx4
-            _, unique_idx = np.unique(pc.view([('', pc.dtype)] * pc.shape[1]), return_index=True)
-            unique_idx = np.sort(unique_idx)
-            pts_prev = pts_prev[unique_idx]
-            pts_curr = pts_curr[unique_idx]
-        except Exception:
-            pass
-
-        # Filtro final de finitos
-        mask = np.all(np.isfinite(pts_prev), axis=1) & np.all(np.isfinite(pts_curr), axis=1)
-        pts_prev = np.ascontiguousarray(pts_prev[mask])
-        pts_curr = np.ascontiguousarray(pts_curr[mask])
-
-        # Dispersión y degeneración (evita segfaults en Essential en Android)
-        if len(pts_prev) < 8:
-            return None, None
-
-        # poca dispersión (casi mismo punto) -> descartar
-        std_prev = np.std(pts_prev, axis=0)
-        std_curr = np.std(pts_curr, axis=0)
-        if (std_prev[0] < 1.0 and std_prev[1] < 1.0) or (std_curr[0] < 1.0 and std_curr[1] < 1.0):
-            return None, None
-
-        # casi colineal: área de triángulos muy pequeña en la mayoría
-        try:
-            P = pts_prev[:64] if len(pts_prev) > 64 else pts_prev
-            A = np.abs((P[1:,0]-P[:-1,0])*(P[2:,1]-P[1:-1,1]) - (P[1:,1]-P[:-1,1])*(P[2:,0]-P[1:-1,0]))
-            if len(A) > 8 and np.median(A) < 5e-2:
-                return None, None
-        except Exception:
-            pass
-
-        # Tope definitivo
-        if len(pts_prev) > max_pairs:
-            idx = np.linspace(0, len(pts_prev)-1, max_pairs).astype(int)
-            pts_prev = np.ascontiguousarray(pts_prev[idx])
-            pts_curr = np.ascontiguousarray(pts_curr[idx])
-
         return pts_prev, pts_curr
 
-    # --------------- IMU helpers ----------------
-    def _apply_yaw_offset_to_imu(self, R_imu):
-        R_off = _Ry(self._yaw_offset)
-        return R_off @ R_imu
-
-    def _fuse_rotation_with_imu(self, R_vo, inlier_ratio, num_matches, R_rel_imu=None):
-        if not self._imu_on or R_rel_imu is None:
-            return R_vo
-        w = self.imu_weight
-        if num_matches < 80 or inlier_ratio < 0.6:
-            w = max(w, 0.16)
-        elif num_matches > 140 and inlier_ratio > 0.78:
-            w = min(w, 0.10)
-        w = min(w, 0.18)
-        try:
-            R_rel_imu = self._apply_yaw_offset_to_imu(R_rel_imu)
-            return _so3_interpolate(R_vo, R_rel_imu, alpha=w)
-        except Exception as e:
-            _log(f"IMU fuse failed: {e}")
-            return R_vo
-
-    def _gate_motion_with_stationary(self, R_vo, t_vo):
-        if not self._imu_on:
-            return R_vo, t_vo, False
-        try:
-            if self._imu.is_stationary(window=0.35):
-                _log("ZUPT: dispositivo quieto, anulando incremento (R=I, t=0).")
-                return np.eye(3), np.zeros_like(t_vo), True
-            if np.linalg.norm(t_vo) < 0.01:
-                t_vo = np.zeros_like(t_vo)
-            return R_vo, t_vo, False
-        except Exception as e:
-            _log(f"Stationary gate failed: {e}")
-            return R_vo, t_vo, False
-
-    def _planarize_yaw_and_project(self, R, t, stationary=False):
-        yaw = _yaw_from_Ry(R)
-        if self._yaw_smooth is None:
-            self._yaw_smooth = yaw
-            _log(f"Yaw init: {self._yaw_smooth:.3f} rad")
-        if not stationary:
-            prev = self._yaw_smooth
-            self._yaw_smooth = (1.0 - self._yaw_alpha) * self._yaw_smooth + self._yaw_alpha * yaw
-            if abs(self._yaw_smooth - prev) > 0.02:
-                _log(f"Yaw smooth actualizado: {self._yaw_smooth:.3f} (raw={yaw:.3f})")
-        R_yaw = _Ry(self._yaw_smooth)
-        t = t.copy()
-        t[1, 0] = 0.0
-        return R_yaw, t
-
-    def _update_yaw_offset(self, R_vo, confidence, R_rel_imu=None):
-        if not self._imu_on or R_rel_imu is None:
-            return
-        try:
-            yaw_vo = _yaw_from_Ry(R_vo)
-            yaw_imu = _yaw_from_Ry(R_rel_imu)
-            delta = _wrap_pi(yaw_vo - yaw_imu)
-            alpha = self._yaw_offset_alpha * float(np.clip(confidence, 0.0, 1.0))
-            prev = self._yaw_offset
-            self._yaw_offset = (1.0 - alpha) * self._yaw_offset + alpha * delta
-            if abs(self._yaw_offset - prev) > 0.01:
-                _log(f"Auto-calib yaw_offset: {self._yaw_offset:.3f} (delta={delta:.3f}, conf={confidence:.2f})")
-            if abs(self._yaw_offset) > 1e-3:
-                self._calib_ready = True
-        except Exception as e:
-            _log(f"Yaw offset update failed: {e}")
-
-    # --------------- Origin ----------------
-    def _ensure_origin_alignment(self, pose_vo_now):
+    def _ensure_origin(self, pose_vo_now):
         if self.origin_aligned:
             return
         p0 = pose_vo_now[:3, 3]
@@ -678,370 +609,677 @@ class PoseGraphSLAM:
         Tw[:3, 3] = -Rw @ p0
         self.world_T_from_vo = Tw
         self.origin_aligned = True
-        _log("World origin aligned: start set to (0,0), heading -> +Z")
+        _log("World origin aligned.", "INFO")
 
-    # --------------- Main frame processing ----------------
+    # ----------------- Main frame -----------------
+
     def process_frame(self, frame):
+        frame_t0 = time.time()
+
+        frame_idx = self.total_pose_estimations + self.frame_counter
+        reason = None
+        vo_rebooted = False
+
+        diag = {
+            "frame_idx": frame_idx,
+            "n_kps": 0,
+            "n_matches": 0,
+            "parallax_med_px": 0.0,
+            "inliers": 0,
+            "inlier_ratio": 0.0,
+            "ekf_yaw": float(self.ekf.yaw),
+            "ekf_bias": float(self.ekf.bias),
+            "imu_rate": 0.0,
+            "imu_var": float('nan'),
+            "keyframe_added": 0,
+            "reason": "",
+            "orb_mode": self._orb_mode,
+            "ratio": 0.0,
+            "ransac_thr": 0.0,
+            "min_par": 0.0,
+            "ekf_update": 0,
+            "bandit_ctx": "",
+            "bandit_arm": "",
+            "bandit_reward": 0.0,
+            "bandit_Q": 0.0,
+            "bandit_N": 0,
+            "bandit_ucb": 0.0,
+            "cooldown_arm": 0,
+            "cooldown_orb": 0,
+            "arm_changed": 0,
+            "orb_changed": 0,
+            "frame_dt_ms": 0.0,
+            "fps_inst": 0.0,
+            "fps_avg": 0.0,
+            "trans_mag": 0.0,
+            "total_distance": float(self.total_translation_magnitude),
+            "vo_fail_count": int(getattr(self, "_vo_fail_count", 0)),
+            "vo_reboot": 0,
+            "is_stationary": 0,
+            "imu_gated": 0,
+        }
+
         try:
-            if self._closed:
-                _log("process_frame llamado después de close(); ignorando frame.")
-                return
-
-            now = time.time()
-            if self._last_frame_time is None:
-                self._last_frame_time = now
-
             if frame is None or frame.size == 0:
-                _log("process_frame: frame vacío")
+                reason = "E00_empty_frame"
+                _log(f"[{frame_idx}] {reason}", "WARNING")
                 return
+
+            # cuadros en gris
             if frame.ndim == 2:
                 gray = frame
             else:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            kps, desc = self.orb_detector.detectAndCompute(gray, None)
-            desc = None if desc is None else np.ascontiguousarray(desc, dtype=np.uint8)
-            _log(f"Frame: kps={len(kps) if kps is not None else 0}, desc={'OK' if desc is not None else 'None'}")
+            # ---- Calidad IMU para adaptativos ----
+            rate_fast, var_fast = self.imu.quality(window=0.6)
+            _t_wz = self.imu.yaw_rate_world()
+            wz_abs = abs(_t_wz[1]) if (_t_wz and _t_wz[1] is not None) else 0.0
 
-            R_rel_imu = None
-            if self._imu_on:
+            # Dispara modo rápido si hay buena tasa/var o giro fuerte
+            g_fast = (
+                (rate_fast >= max(60.0, 0.6*self.imu_min_rate_hz)) and
+                (np.isfinite(var_fast) and var_fast > 0.02)
+            ) or (wz_abs >= 0.9)
+
+            # ORB adaptativo
+            if self.enable_adaptive_orb:
+                if g_fast and self._orb_mode != 'fast':
+                    self.orb = cv2.ORB_create(nfeatures=2500, fastThreshold=9)
+                    self._orb_mode = 'fast'
+                    _log(f"[{frame_idx}] ORB→FAST (nfeatures=2500, fastTh=9)", 'DEBUG')
+                elif (not g_fast) and self._orb_mode != 'normal':
+                    self.orb = cv2.ORB_create(nfeatures=1600, fastThreshold=12)
+                    self._orb_mode = 'normal'
+                    _log(f"[{frame_idx}] ORB→NORMAL (nfeatures=1600, fastTh=12)", 'DEBUG')
+
+            # Umbrales dinámicos
+            ransac_thr = 1.2 if (self.enable_adaptive_ransac and g_fast) else 0.7
+            min_par = 0.85 if (self.enable_dynamic_parallax and g_fast) else self.min_parallax_px
+            ratio_rt = (0.83 if (self.enable_adaptive_ratio and g_fast) else 0.70)
+
+            # Guardrails básicos
+            ratio_rt = min(ratio_rt, 0.85)
+            ransac_thr = min(ransac_thr, 1.5)
+            min_par = max(min_par, 0.70)
+
+            # Bandit selection (ajuste dinámico de parámetros)
+            bandit_ctx = 'fast' if g_fast else 'normal'
+            if getattr(self, 'enable_bandit', False):
                 try:
-                    R_rel_imu = self._imu.get_relative_rotation_since_last()
-                except Exception as e:
-                    _log(f"IMU get_relative_rotation_since_last failed: {e}")
-                    R_rel_imu = None
+                    B = self._bandit[bandit_ctx]
+                    arm_idx, ucb_val = B.select()
+                    cfg = self._bandit_cfg[bandit_ctx][arm_idx]
 
-            # --- Matching contra el último keyframe ---
-            if self.previous_keyframe_descriptors is not None and desc is not None and (kps and len(kps) > 0):
-                matches = self.filter_matches_lowe_ratio(self.previous_keyframe_descriptors, desc)
-                _log(f"Matches Lowe={len(matches)} vs min={self.min_matches}")
+                    # --- Safe override si venimos con fallos recientes de VO ---
+                    if self._vo_fail_count >= 2:
+                        safe_name = self._safe_arm.get(bandit_ctx, cfg['name'])
+                        for i_c, c in enumerate(self._bandit_cfg[bandit_ctx]):
+                            if c['name'] == safe_name:
+                                cfg = c
+                                arm_idx = i_c
+                                break
 
-                # Parallax rápido (usar índices, no objetos KeyPoint previos)
+                    desired_orb = cfg['orb']
+
+                    # --- Cooldown ORB: evita recrear ORB si cambiamos hace poco ---
+                    if desired_orb != self._orb_mode:
+                        if (frame_idx - self._last_orb_switch) >= self.bandit_orb_cooldown:
+                            if desired_orb == 'fast':
+                                self.orb = cv2.ORB_create(nfeatures=2500, fastThreshold=9)
+                            else:
+                                self.orb = cv2.ORB_create(nfeatures=1600, fastThreshold=12)
+                            self._orb_mode = desired_orb
+                            self._last_orb_switch = frame_idx
+                            diag['orb_changed'] = 1
+                            _log(f"[{frame_idx}] ORB→{desired_orb.upper()} (bandit)", 'DEBUG')
+                        else:
+                            # Respetar cooldown: no cambiamos ORB esta vez
+                            diag['cooldown_orb'] = 1
+                            desired_orb = self._orb_mode  # mantenerse
+
+                    # --- Cooldown ARM: evita thrashing de brazo ---
+                    prev_arm = self._prev_arm.get(bandit_ctx, None)
+                    if prev_arm is not None and cfg['name'] != prev_arm:
+                        if (frame_idx - self._last_arm_switch[bandit_ctx]) < self.bandit_arm_cooldown:
+                            # Forzar brazo previo por cooldown
+                            for i_c, c in enumerate(self._bandit_cfg[bandit_ctx]):
+                                if c['name'] == prev_arm:
+                                    cfg = c
+                                    arm_idx = i_c
+                                    break
+                            diag['cooldown_arm'] = 1
+
+                    # Aplicar configuración al pipeline
+                    ratio_rt = float(cfg['ratio'])
+                    ransac_thr = float(cfg['ransac'])
+                    min_par = float(cfg['min_par'])
+
+                    # Guardrails
+                    ratio_rt = min(ratio_rt, 0.85)
+                    ransac_thr = min(ransac_thr, 1.5)
+                    min_par = max(min_par, 0.70)
+
+                    # Estado y logging
+                    diag['bandit_ctx'] = bandit_ctx
+                    diag['bandit_arm'] = cfg['name']
+                    diag['bandit_ucb'] = float(ucb_val)
+
+                    # Marcar cambio de brazo si aplica
+                    if cfg['name'] != prev_arm:
+                        self._prev_arm[bandit_ctx] = cfg['name']
+                        self._last_arm_switch[bandit_ctx] = frame_idx
+                        diag['arm_changed'] = 1
+
+                except Exception as _e_b:
+                    _log(f"[{frame_idx}] Bandit error: {_e_b}", 'WARNING')
+
+            # ORB detect+compute
+            kps, desc = self.orb.detectAndCompute(gray, None)
+            desc = None if desc is None else np.ascontiguousarray(desc, dtype=np.uint8)
+
+            diag['orb_mode'] = self._orb_mode
+            diag['ratio'] = float(ratio_rt)
+            diag['ransac_thr'] = float(ransac_thr)
+            diag['min_par'] = float(min_par)
+            diag["n_kps"] = 0 if kps is None else len(kps)
+
+            # Predicción IMU -> EKF (integrando todas las muestras yaw-rate mundo)
+            seq = self.imu.drain_yaw_world_since(self.ekf.last_time())
+            if seq:
+                self.ekf.predict_many(seq)
+            else:
+                t_gw = self.imu.yaw_rate_world()
+                if t_gw[0] is not None:
+                    self.ekf.predict(t_gw[0], t_gw[1])
+
+            rate, varm = self.imu.quality(window=0.6)
+            diag["imu_rate"] = float(rate)
+            diag["imu_var"] = float(varm)
+
+            imu_gated_now = 0
+            if rate < self.imu_min_rate_hz or (not np.isfinite(varm)) or (varm > self.imu_max_var):
+                # Si la IMU está mala, avisamos que “gateamos” la fusión (solo VO)
+                imu_gated_now = 1
+                _log(f"[{frame_idx}] IMU gating: rate={rate:.1f}Hz var={varm:.5f} -> VO-only (sin mezclar IMU si aplica).", "DEBUG")
+
+            # Si ya tenemos keyframe previo, intentamos VO relativo
+            if self.prev_kf_desc is not None and desc is not None and (kps and len(kps) > 0):
+                matches = self._filter_matches(self.prev_kf_desc, desc, ratio=ratio_rt)
+                diag["n_matches"] = len(matches) if matches else 0
+
+                # parallax rápido
                 px_disp = 0.0
-                if len(matches) >= 10 and self.previous_keyframe_points is not None:
+                if len(matches) >= 10 and self.prev_kf_pts is not None:
                     dists = []
                     curr_pts_quick = np.array([kp.pt for kp in kps], dtype=np.float32)
-                    n_prev = int(self.previous_keyframe_points.shape[0])
+                    n_prev = int(self.prev_kf_pts.shape[0])
                     n_curr = int(curr_pts_quick.shape[0])
                     for m in matches[:200]:
                         qi = int(m.queryIdx); ti = int(m.trainIdx)
                         if qi < 0 or qi >= n_prev or ti < 0 or ti >= n_curr:
                             continue
-                        p0 = self.previous_keyframe_points[qi]
+                        p0 = self.prev_kf_pts[qi]
                         p1 = curr_pts_quick[ti]
                         dists.append(float(np.hypot(p1[0]-p0[0], p1[1]-p0[1])))
                     if dists:
                         px_disp = float(np.median(dists))
-                _log(f"Parallax px≈{px_disp:.2f} (min={self.min_parallax_px})")
+                diag["parallax_med_px"] = float(px_disp)
 
-                will_estimate = (len(matches) >= self.min_matches and px_disp >= self.min_parallax_px)
-                _log(f"Post-parallax check -> will_estimate_pose={will_estimate}")
-
-                if will_estimate:
-                    pts_prev, pts_curr = self._build_sanitized_pairs(
-                        matches,
-                        self.previous_keyframe_points,
-                        kps,
-                        max_pairs=min(self.MAX_GOOD_MATCHES, 800)
-                    )
-                    if pts_prev is None or len(pts_prev) < self.min_matches:
-                        _log("Puntos válidos tras saneo insuficientes o degenerados; skip pose.")
-                        self.frame_counter += 1
-                        self._last_frame_time = now
-                        return
-
-                    # --- Essential + Pose (con checks adicionales) ---
-                    try:
-                        _log(f"Calling findEssentialMat with N={len(pts_prev)} pts…")
-                        E, mask = cv2.findEssentialMat(
-                            np.ascontiguousarray(pts_prev, dtype=np.float32),
-                            np.ascontiguousarray(pts_curr, dtype=np.float32),
-                            self.camera_matrix,
-                            method=cv2.RANSAC, threshold=0.7, prob=0.999
-                        )
-                    except Exception as e:
-                        _log(f"findEssentialMat exception: {e}")
-                        self.frame_counter += 1
-                        self._last_frame_time = now
-                        return
-
-                    if E is None or mask is None:
-                        _log("EssentialMat falló (E=None o mask=None)")
-                        self.frame_counter += 1
-                        self._last_frame_time = now
-                        return
-
-                    inliers = int(mask.sum())
-                    inlier_ratio = inliers / max(1, len(mask))
-                    _log(f"Essential OK: inliers={inliers}/{len(mask)} ({inlier_ratio:.2%})")
-                    if inlier_ratio < self.min_inlier_ratio:
-                        _log("Descartado por inlier_ratio bajo.")
-                        self.frame_counter += 1
-                        self._last_frame_time = now
-                        return
-
-                    try:
-                        _log("Calling recoverPose…")
-                        _, R, t, _ = cv2.recoverPose(E,
-                            np.ascontiguousarray(pts_prev, dtype=np.float32),
-                            np.ascontiguousarray(pts_curr, dtype=np.float32),
-                            self.camera_matrix)
-                        _log(f"recoverPose OK: |t|={np.linalg.norm(t):.3f} m")
-                    except Exception as e:
-                        _log(f"recoverPose exception: {e}")
-                        self.frame_counter += 1
-                        self._last_frame_time = now
-                        return
-
-                    self._update_yaw_offset(R, confidence=inlier_ratio, R_rel_imu=R_rel_imu)
-                    R = self._fuse_rotation_with_imu(R, inlier_ratio, len(matches), R_rel_imu=R_rel_imu)
-                    R, t, is_still = self._gate_motion_with_stationary(R, t)
-                    R, t = self._planarize_yaw_and_project(R, t, stationary=is_still)
-
-                    rel = np.eye(4)
-                    rel[:3, :3] = R
-                    rel[:3, 3] = t.ravel()
-                    curr_vo = self.previous_keyframe_pose_vo @ rel
-
-                    self._ensure_origin_alignment(curr_vo)
-                    curr_world = self.world_T_from_vo @ curr_vo
-
-                    trans_mag = np.linalg.norm(rel[:3, 3])
-                    _log(f"Delta pose: |t|={trans_mag:.3f} m, add_KF? gap={self.frame_counter}/{self.min_frame_gap}, still={is_still}")
-
-                    if (not is_still) and (self.frame_counter >= self.min_frame_gap or trans_mag > self.min_keyframe_translation):
-                        self.keyframe_poses.append(curr_world.copy())
-                        self.relative_transformations.append(rel.copy())
-
-                        self.previous_keyframe_points = np.array([kp.pt for kp in kps], dtype=np.float32)
-                        self.previous_keyframe_descriptors = np.ascontiguousarray(desc.copy(), dtype=np.uint8)
-                        self.previous_keyframe_pose_vo = curr_vo
-                        self.previous_keyframe_pose_world = curr_world
-
-                        self._live_counter += 1
-                        if self._live_counter % self._live_every == 0:
-                            self._save_live_preview()
-
-                        _log(f"KEYFRAME añadido. Total={len(self.keyframe_poses)}")
-                        self.frame_counter = 0
-                    else:
-                        self.frame_counter += 1
-
-                    self.total_successful_frames += 1
-                    self.total_tracked_matches += len(matches)
-                    self.total_translation_magnitude += trans_mag
-                    self.total_pose_estimations += 1
-                else:
-                    _log("No cumple min_matches o min_parallax; no se intenta pose.")
+                # check si vale la pena estimar pose
+                will_estimate = (len(matches) >= self.min_matches and px_disp >= min_par)
+                if not will_estimate:
+                    reason = "E01_low_matches_or_parallax"
+                    self._vo_fail_count += 1
+                    if self._vo_fail_count >= self.vo_reboot_N:
+                        # Re-intento de reinicializar keyframe (VO_REBOOT)
+                        try:
+                            if kps is not None and len(kps) > 0 and desc is not None:
+                                if self.keyframe_poses:
+                                    self.keyframe_poses.append(self.prev_kf_pose_world.copy())
+                                else:
+                                    self.keyframe_poses.append(np.eye(4))
+                                self.prev_kf_pts = np.array([kp.pt for kp in kps], dtype=np.float32)
+                                self.prev_kf_desc = np.ascontiguousarray(desc.copy(), dtype=np.uint8)
+                                self.frame_counter = 0
+                                _log(f"[{frame_idx}] VO_REBOOT: re-inicializado KF tras {self._vo_fail_count} fallos.", "WARNING")
+                                vo_rebooted = True
+                                diag['vo_reboot'] = 1
+                            else:
+                                _log(f"[{frame_idx}] VO_REBOOT omitido (no hay kps/desc).", "WARNING")
+                        except Exception as _e_rb:
+                            _log(f"VO_REBOOT error: {_e_rb}", "ERROR")
+                        self._vo_fail_count = 0
+                    _log(f"[{frame_idx}] {reason}: matches={len(matches)}, parallax={px_disp:.2f}px", "DEBUG")
                     self.frame_counter += 1
+                    return
+
+                pts_prev, pts_curr = self._pairs(matches, self.prev_kf_pts, kps,
+                                                 max_pairs=min(self.MAX_GOOD_MATCHES, 800))
+                if pts_prev is None or len(pts_prev) < self.min_matches:
+                    reason = "E02_pairs_none_or_short"
+                    self._vo_fail_count += 1
+                    if self._vo_fail_count >= self.vo_reboot_N:
+                        try:
+                            if kps is not None and len(kps) > 0 and desc is not None:
+                                if self.keyframe_poses:
+                                    self.keyframe_poses.append(self.prev_kf_pose_world.copy())
+                                else:
+                                    self.keyframe_poses.append(np.eye(4))
+                                self.prev_kf_pts = np.array([kp.pt for kp in kps], dtype=np.float32)
+                                self.prev_kf_desc = np.ascontiguousarray(desc.copy(), dtype=np.uint8)
+                                self.frame_counter = 0
+                                _log(f"[{frame_idx}] VO_REBOOT: re-inicializado KF tras {self._vo_fail_count} fallos.", "WARNING")
+                                vo_rebooted = True
+                                diag['vo_reboot'] = 1
+                            else:
+                                _log(f"[{frame_idx}] VO_REBOOT omitido (no hay kps/desc).", "WARNING")
+                        except Exception as _e_rb:
+                            _log(f"VO_REBOOT error: {_e_rb}", "ERROR")
+                        self._vo_fail_count = 0
+                    _log(f"[{frame_idx}] {reason}: pairs={0 if pts_prev is None else len(pts_prev)}", "DEBUG")
+                    self.frame_counter += 1
+                    return
+
+                # Essential + Pose
+                try:
+                    E, mask = cv2.findEssentialMat(
+                        np.ascontiguousarray(pts_prev, dtype=np.float32),
+                        np.ascontiguousarray(pts_curr, dtype=np.float32),
+                        self.camera_matrix,
+                        method=cv2.RANSAC,
+                        threshold=ransac_thr,
+                        prob=0.999
+                    )
+                except Exception as e:
+                    reason = "E03_findEssentialMat_exception"
+                    self._vo_fail_count += 1
+                    if self._vo_fail_count >= self.vo_reboot_N:
+                        try:
+                            if kps is not None and len(kps) > 0 and desc is not None:
+                                if self.keyframe_poses:
+                                    self.keyframe_poses.append(self.prev_kf_pose_world.copy())
+                                else:
+                                    self.keyframe_poses.append(np.eye(4))
+                                self.prev_kf_pts = np.array([kp.pt for kp in kps], dtype=np.float32)
+                                self.prev_kf_desc = np.ascontiguousarray(desc.copy(), dtype=np.uint8)
+                                self.frame_counter = 0
+                                _log(f"[{frame_idx}] VO_REBOOT: re-inicializado KF tras {self._vo_fail_count} fallos.", "WARNING")
+                                vo_rebooted = True
+                                diag['vo_reboot'] = 1
+                            else:
+                                _log(f"[{frame_idx}] VO_REBOOT omitido (no hay kps/desc).", "WARNING")
+                        except Exception as _e_rb:
+                            _log(f"VO_REBOOT error: {_e_rb}", "ERROR")
+                        self._vo_fail_count = 0
+                    _log(f"[{frame_idx}] {reason}: {e}\n{traceback.format_exc()}", "ERROR")
+                    self.frame_counter += 1
+                    return
+
+                if E is None or mask is None:
+                    reason = "E04_findEssentialMat_empty"
+                    self._vo_fail_count += 1
+                    if self._vo_fail_count >= self.vo_reboot_N:
+                        try:
+                            if kps is not None and len(kps) > 0 and desc is not None:
+                                if self.keyframe_poses:
+                                    self.keyframe_poses.append(self.prev_kf_pose_world.copy())
+                                else:
+                                    self.keyframe_poses.append(np.eye(4))
+                                self.prev_kf_pts = np.array([kp.pt for kp in kps], dtype=np.float32)
+                                self.prev_kf_desc = np.ascontiguousarray(desc.copy(), dtype=np.uint8)
+                                self.frame_counter = 0
+                                _log(f"[{frame_idx}] VO_REBOOT: re-inicializado KF tras {self._vo_fail_count} fallos.", "WARNING")
+                                vo_rebooted = True
+                                diag['vo_reboot'] = 1
+                            else:
+                                _log(f"[{frame_idx}] VO_REBOOT omitido (no hay kps/desc).", "WARNING")
+                        except Exception as _e_rb:
+                            _log(f"VO_REBOOT error: {_e_rb}", "ERROR")
+                        self._vo_fail_count = 0
+                    _log(f"[{frame_idx}] {reason}", "DEBUG")
+                    self.frame_counter += 1
+                    return
+
+                inliers = int(mask.sum())
+                inlier_ratio = inliers / max(1, len(mask))
+                diag["inliers"] = int(inliers)
+                diag["inlier_ratio"] = float(inlier_ratio)
+
+                if inlier_ratio < self.min_inlier_ratio:
+                    reason = "E05_low_inlier_ratio"
+                    self._vo_fail_count += 1
+                    if self._vo_fail_count >= self.vo_reboot_N:
+                        try:
+                            if kps is not None and len(kps) > 0 and desc is not None:
+                                if self.keyframe_poses:
+                                    self.keyframe_poses.append(self.prev_kf_pose_world.copy())
+                                else:
+                                    self.keyframe_poses.append(np.eye(4))
+                                self.prev_kf_pts = np.array([kp.pt for kp in kps], dtype=np.float32)
+                                self.prev_kf_desc = np.ascontiguousarray(desc.copy(), dtype=np.uint8)
+                                self.frame_counter = 0
+                                _log(f"[{frame_idx}] VO_REBOOT: re-inicializado KF tras {self._vo_fail_count} fallos.", "WARNING")
+                                vo_rebooted = True
+                                diag['vo_reboot'] = 1
+                            else:
+                                _log(f"[{frame_idx}] VO_REBOOT omitido (no hay kps/desc).", "WARNING")
+                        except Exception as _e_rb:
+                            _log(f"VO_REBOOT error: {_e_rb}", "ERROR")
+                        self._vo_fail_count = 0
+                    _log(f"[{frame_idx}] {reason}: inliers={inliers}/{len(mask)} ({inlier_ratio:.2f})", "DEBUG")
+                    self.frame_counter += 1
+                    return
+
+                try:
+                    _, R_vo, t_vo, _ = cv2.recoverPose(
+                        E,
+                        np.ascontiguousarray(pts_prev, dtype=np.float32),
+                        np.ascontiguousarray(pts_curr, dtype=np.float32),
+                        self.camera_matrix
+                    )
+                except Exception as e:
+                    reason = "E06_recoverPose_exception"
+                    self._vo_fail_count += 1
+                    if self._vo_fail_count >= self.vo_reboot_N:
+                        try:
+                            if kps is not None and len(kps) > 0 and desc is not None:
+                                if self.keyframe_poses:
+                                    self.keyframe_poses.append(self.prev_kf_pose_world.copy())
+                                else:
+                                    self.keyframe_poses.append(np.eye(4))
+                                self.prev_kf_pts = np.array([kp.pt for kp in kps], dtype=np.float32)
+                                self.prev_kf_desc = np.ascontiguousarray(desc.copy(), dtype=np.uint8)
+                                self.frame_counter = 0
+                                _log(f"[{frame_idx}] VO_REBOOT: re-inicializado KF tras {self._vo_fail_count} fallos.", "WARNING")
+                                vo_rebooted = True
+                                diag['vo_reboot'] = 1
+                            else:
+                                _log(f"[{frame_idx}] VO_REBOOT omitido (no hay kps/desc).", "WARNING")
+                        except Exception as _e_rb:
+                            _log(f"VO_REBOOT error: {_e_rb}", "ERROR")
+                        self._vo_fail_count = 0
+                    _log(f"[{frame_idx}] {reason}: {e}\n{traceback.format_exc()}", "ERROR")
+                    self.frame_counter += 1
+                    return
+
+                # ZUPT / quietud
+                st_flag = self.imu.is_stationary(window=0.35)
+                if st_flag:
+                    R_vo[:] = np.eye(3)
+                    t_vo[:] = 0.0
+                    self.ekf.P *= 0.6
+                    _log(f"[{frame_idx}] ZUPT aplicado (quietud detectada).", "DEBUG")
+                diag["is_stationary"] = 1 if st_flag else 0
+
+                # Fusión EKF (VO -> medida de yaw) — condicionar por calidad IMU
+                yaw_vo = _yaw_from_Ry(R_vo)
+                r_meas = np.deg2rad(max(1.5, 8.0*(1.0 - min(1.0, inlier_ratio))))**2
+                if inlier_ratio < 0.40:
+                    r_meas *= 2.5
+                if float(diag.get('parallax_med_px', 0.0)) < 2.0:
+                    r_meas *= 2.5
+
+                if imu_gated_now == 0:
+                    # IMU OK -> update EKF con medida VO
+                    self.ekf.update_vo(yaw_vo, r=r_meas, gate_deg=15.0)
+                    diag['ekf_update'] = 1
+                else:
+                    # IMU no confiable -> no actualizamos EKF
+                    diag['imu_gated'] = 1
+                    _log(f"[{frame_idx}] VO yaw medido={yaw_vo:.3f} (IMU gating: sin update EKF).", "DEBUG")
+
+                # Suavizado de yaw final y proyección plana
+                yaw_fused = self.ekf.yaw
+                if self._yaw_smooth is None:
+                    self._yaw_smooth = yaw_fused
+                else:
+                    self._yaw_smooth = (
+                        (1.0 - self._yaw_alpha)*self._yaw_smooth +
+                        self._yaw_alpha*yaw_fused
+                    )
+                R_yaw = _Ry(self._yaw_smooth)
+
+                # Sólo plano X-Z
+                t_vo = t_vo.copy()
+                t_vo[1,0] = 0.0  # trayectoria plana
+
+                rel = np.eye(4)
+                rel[:3, :3] = R_yaw
+                rel[:3, 3] = t_vo.ravel()
+                curr_vo = self.prev_kf_pose_vo @ rel
+
+                self._ensure_origin(curr_vo)
+                curr_world = self.world_T_from_vo @ curr_vo
+
+                trans_mag = np.linalg.norm(rel[:3, 3])
+                diag["trans_mag"] = float(trans_mag)
+
+                add_kf = (
+                    self.frame_counter >= self.min_frame_gap or
+                    trans_mag > self.min_keyframe_translation
+                )
+                if add_kf:
+                    self.keyframe_poses.append(curr_world.copy())
+                    self.prev_kf_pts = np.array([kp.pt for kp in kps], dtype=np.float32)
+                    self.prev_kf_desc = np.ascontiguousarray(desc.copy(), dtype=np.uint8)
+                    self.prev_kf_pose_vo = curr_vo
+                    self.prev_kf_pose_world = curr_world
+                    self._live_counter += 1
+                    self.frame_counter = 0
+                    diag["keyframe_added"] = 1
+                    _log(f"[{frame_idx}] Keyframe agregado. trans={trans_mag:.3f}", "DEBUG")
+                    self._vo_fail_count = 0
+                else:
+                    self.frame_counter += 1
+
+                self.total_successful_frames += 1
+                self.total_tracked_matches += len(matches)
+                self.total_translation_magnitude += trans_mag
+                self.total_pose_estimations += 1
+
+                diag["total_distance"] = float(self.total_translation_magnitude)
+
             else:
-                # Primer KF
+                # primer KF
                 self.keyframe_poses.append(np.eye(4))
-                self.previous_keyframe_points = (
+                self.prev_kf_pts = (
                     None if not kps else np.array([kp.pt for kp in kps], dtype=np.float32)
                 )
-                self.previous_keyframe_descriptors = (
+                self.prev_kf_desc = (
                     None if desc is None else np.ascontiguousarray(desc.copy(), dtype=np.uint8)
                 )
-                self.previous_keyframe_pose_vo = np.eye(4)
-                self.previous_keyframe_pose_world = np.eye(4)
-                _log("Primer keyframe inicializado.")
+                self.prev_kf_pose_vo = np.eye(4)
+                self.prev_kf_pose_world = np.eye(4)
+                diag["keyframe_added"] = 1
+                _log(f"[{frame_idx}] Primer keyframe inicializado. kps={diag['n_kps']}", "INFO")
+                self._vo_fail_count = 0
 
-            # limpieza periódicas
-            if (self.total_pose_estimations % 50) == 0:
-                gc.collect()
-
-            self._last_frame_time = now
         except Exception as e:
-            _log(f"process_frame error: {e}")
+            reason = "E99_process_frame_exception"
+            _log(f"[{frame_idx}] {reason}: {e}\n{traceback.format_exc()}", "ERROR")
 
-    # --------------- Output trajectory ----------------
+        finally:
+            # -------- Métricas de frame time / FPS --------
+            frame_t1 = time.time()
+            dt_sec = max(1e-9, frame_t1 - frame_t0)
+            fps_inst = (1.0 / dt_sec) if dt_sec > 0.0 else 0.0
+            if self._fps_ema is None:
+                self._fps_ema = fps_inst
+            else:
+                self._fps_ema = (
+                    (1.0 - self._fps_alpha)*self._fps_ema +
+                    self._fps_alpha*fps_inst
+                )
+
+            diag["frame_dt_ms"] = float(dt_sec * 1000.0)
+            diag["fps_inst"] = float(fps_inst)
+            diag["fps_avg"] = float(self._fps_ema)
+
+            # Muestreo de desempeño (cada N frames) -> PERF {...} en android_perf
+            try:
+                if getattr(self, 'perf', None) is not None:
+                    if (frame_idx % int(getattr(self.perf, 'sample_interval_frames', 15))) == 0:
+                        self.perf.sample(frame_idx, extra={
+                            'bandit_arm': diag.get('bandit_arm'),
+                            'bandit_ctx': diag.get('bandit_ctx'),
+                            'orb_mode': diag.get('orb_mode')
+                        })
+            except Exception:
+                pass
+
+            # Guardar yaw/bias finales
+            diag["ekf_yaw"] = float(self.ekf.yaw)
+            diag["ekf_bias"] = float(self.ekf.bias)
+
+            # Motivo de corte
+            if reason:
+                diag["reason"] = reason
+
+            # Contadores VO
+            diag["vo_fail_count"] = int(getattr(self, "_vo_fail_count", 0))
+            if vo_rebooted:
+                diag["vo_reboot"] = 1
+
+            # Append a buffer interno CSV
+            self._diag_rows.append(diag)
+
+            # -------- Bandit reward & update --------
+            try:
+                # falló VO / mala inlier_ratio?
+                fail_flag = 1 if (
+                    diag.get('inlier_ratio', 0.0) <= 1e-9 or
+                    (diag.get('reason','').startswith('E0') and diag.get('reason')!='')
+                ) else 0
+
+                reward = (
+                    0.6*float(diag.get('inlier_ratio',0.0)) +
+                    0.3*(1.0 if diag.get('keyframe_added',0)==1 else 0.0) -
+                    0.5*fail_flag
+                )
+
+                # Penalización por cambio de brazo/ORB para evitar thrashing
+                if int(diag.get('arm_changed',0)) == 1:
+                    reward -= float(self.bandit_change_penalty)
+                if int(diag.get('orb_changed',0)) == 1:
+                    reward -= float(self.orb_change_penalty)
+
+                # Clamp
+                reward = max(-1.0, min(1.0, float(reward)))
+
+                # Suavizado EMA global corto
+                if not self._have_reward_ma:
+                    self._reward_ma = float(reward)
+                    self._have_reward_ma = True
+                else:
+                    self._reward_ma = 0.5*float(reward) + 0.5*float(self._reward_ma)
+
+                reward = float(self._reward_ma)
+                diag['bandit_reward'] = float(reward)
+
+                # Actualizar bandit con reward
+                if getattr(self, 'enable_bandit', False) and diag.get('bandit_ctx'):
+                    Bupd = self._bandit[diag['bandit_ctx']]
+                    cfgs = self._bandit_cfg[diag['bandit_ctx']]
+                    idx_arm = None
+                    for i2, c in enumerate(cfgs):
+                        if c['name'] == diag['bandit_arm']:
+                            idx_arm = i2
+                            break
+                    if idx_arm is not None:
+                        Bupd.update(idx_arm, reward)
+                        diag['bandit_Q'] = float(Bupd.values[idx_arm])
+                        diag['bandit_N'] = int(Bupd.counts[idx_arm])
+                # si no hay bandit_ctx no tocamos
+            except Exception:
+                pass
+
+            # -------- LOG A slam_core.log --------
+            try:
+                _diaglog = {
+                    'frame_idx': diag.get('frame_idx'),
+                    'frame_dt_ms': diag.get('frame_dt_ms'),
+                    'fps_inst': diag.get('fps_inst'),
+                    'fps_avg': diag.get('fps_avg'),
+
+                    'n_kps': diag.get('n_kps'),
+                    'n_matches': diag.get('n_matches'),
+                    'parallax_med_px': diag.get('parallax_med_px'),
+                    'inliers': diag.get('inliers'),
+                    'inlier_ratio': diag.get('inlier_ratio'),
+
+                    'trans_mag': diag.get('trans_mag'),
+                    'total_distance': diag.get('total_distance'),
+
+                    'ekf_yaw': diag.get('ekf_yaw'),
+                    'ekf_bias': diag.get('ekf_bias'),
+                    'ekf_update': diag.get('ekf_update'),
+                    'imu_rate': diag.get('imu_rate'),
+                    'imu_var': diag.get('imu_var'),
+                    'imu_gated': diag.get('imu_gated'),
+                    'is_stationary': diag.get('is_stationary'),
+
+                    'keyframe_added': diag.get('keyframe_added'),
+                    'vo_fail_count': diag.get('vo_fail_count'),
+                    'vo_reboot': diag.get('vo_reboot'),
+                    'reason': diag.get('reason'),
+
+                    'orb_mode': diag.get('orb_mode'),
+                    'ratio': diag.get('ratio'),
+                    'ransac_thr': diag.get('ransac_thr'),
+                    'min_par': diag.get('min_par'),
+
+                    'bandit_ctx': diag.get('bandit_ctx'),
+                    'bandit_arm': diag.get('bandit_arm'),
+                    'bandit_reward': diag.get('bandit_reward'),
+                    'bandit_Q': diag.get('bandit_Q'),
+                    'bandit_N': diag.get('bandit_N'),
+                    'bandit_ucb': diag.get('bandit_ucb'),
+                    'cooldown_arm': diag.get('cooldown_arm'),
+                    'cooldown_orb': diag.get('cooldown_orb'),
+                    'arm_changed': diag.get('arm_changed'),
+                    'orb_changed': diag.get('orb_changed'),
+                }
+                _log(f"DIAG {json.dumps(_diaglog, ensure_ascii=False)}", "INFO")
+            except Exception:
+                pass
+
+    # ----------------- Outputs -----------------
+
     def optimize_pose_graph(self):
         if not self.keyframe_poses:
             return np.zeros((1, 2), dtype=np.float32)
         xs, zs = [], []
         for P in self.keyframe_poses:
-            xs.append(P[0, 3]); zs.append(P[2, 3])
+            xs.append(P[0, 3])
+            zs.append(P[2, 3])
         return np.stack([xs, zs], axis=1).astype(np.float32)
 
-    # --------------- Drawing & Saving ----------------
-    def _normalize_traj_for_canvas(self, traj_xy, W, H, margin=60, y_up=True, center=True):
-        if traj_xy is None or len(traj_xy) == 0:
-            return None
-        pts = np.asarray(traj_xy, dtype=float).copy()
-        mins = pts.min(axis=0); maxs = pts.max(axis=0)
-        span = np.maximum(maxs - mins, 1e-6)
-        scale = 0.9 * min((W - 2*margin) / span[0], (H - 2*margin) / span[1])
-        if center:
-            center_world = (mins + maxs) / 2.0
-            pts -= center_world
-            cx, cy = W / 2.0, H / 2.0
-            xs = cx + scale * pts[:, 0]
-            ys = cy + (-scale * pts[:, 1] if y_up else scale * pts[:, 1])
-        else:
-            pts -= mins
-            xs = margin + scale * pts[:, 0]
-            ys = (H - margin - scale * pts[:, 1]) if y_up else (margin + scale * pts[:, 1])
-        return np.stack([xs, ys], axis=1).astype(np.int32)
+    def _save_diagnostics_csv(self, output_dir):
+        return su._save_diagnostics_csv(self, output_dir)
 
-    def _save_plot_cv(self, traj_xy, out_png, bg=(255,255,255), info_lines=None):
-        H, W = 720, 1280
-        img = np.full((H, W, 3), bg, np.uint8)
-        for x in range(0, W, 100):
-            cv2.line(img, (x, 0), (x, H), (230, 230, 230), 1)
-        for y in range(0, H, 100):
-            cv2.line(img, (0, y), (W, y), (230, 230, 230), 1)
-
-        if traj_xy is not None and len(traj_xy) >= 2:
-            pts_img = self._normalize_traj_for_canvas(traj_xy, W, H, margin=60, y_up=True, center=True)
-            cv2.polylines(img, [pts_img.reshape(-1,1,2)], False, (50, 50, 200), 2, cv2.LINE_AA)
-            cv2.circle(img, tuple(pts_img[0]), 6, (0, 180, 0), -1)
-            cv2.circle(img, tuple(pts_img[-1]), 6, (0, 0, 200), -1)
-            mins = np.min(traj_xy, axis=0); maxs = np.max(traj_xy, axis=0)
-            span = np.maximum(maxs - mins, 1e-6)
-            scale = 0.9 * min((W - 120) / span[0], (H - 120) / span[1])
-            pix_per_meter = scale
-            meters = 1 if pix_per_meter >= 80 else 5
-            bar = int(round(pix_per_meter * meters))
-            x0, y0 = W - 180, H - 80
-            cv2.line(img, (x0, y0), (x0 + bar, y0), (0, 0, 0), 3, cv2.LINE_AA)
-            cv2.putText(img, f"{meters} m", (x0 + bar + 10, y0 + 5),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1, cv2.LINE_AA)
-
-        cv2.arrowedLine(img, (80, H-80), (200, H-80), (0,0,0), 2, tipLength=0.03)
-        cv2.arrowedLine(img, (80, H-80), (80, H-200), (0,0,0), 2, tipLength=0.03)
-        cv2.putText(img, "X (m)", (205, H-75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
-        cv2.putText(img, "Z (m)", (60, H-205), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
-
-        if info_lines:
-            y0, dy = 30, 28
-            for i, line in enumerate(info_lines):
-                cv2.putText(img, line, (20, y0 + i*dy), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (30,30,30), 2, cv2.LINE_AA)
-
-        os.makedirs(os.path.dirname(out_png), exist_ok=True)
-        cv2.imwrite(out_png, img)
-        _log(f"PNG escrito: {os.path.abspath(out_png)}")
-
-    def _save_live_preview(self):
-        try:
-            if not self.keyframe_poses:
-                return
-            traj_2d = np.array([[pose[0, 3], pose[2, 3]] for pose in self.keyframe_poses], dtype=float)
-            live_png = "resultados/live/preview.png"
-            self._save_plot_cv(traj_2d, live_png, info_lines=None)
-            if self.download_slam_dir:
-                try:
-                    out_dl = os.path.join(self.download_slam_dir, "live_preview.png")
-                    shutil.copy2(live_png, out_dl)
-                    _log(f"Live preview duplicado en: {out_dl}")
-                except Exception as e:
-                    _log(f"No se pudo duplicar live preview en Downloads/slam_logs: {e}")
-        except Exception as e:
-            _log(f"Live preview save error: {e}")
-
-    def _also_save_to_downloads_slam_logs(self, src_png, src_csv):
-        if not self.download_slam_dir:
-            _log("Downloads/slam_logs no disponible; se omite duplicado.")
-            return None
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        base = f"trajectory_{self.name}_{ts}"
-        dest_png = os.path.join(self.download_slam_dir, base + ".png")
-        dest_csv = os.path.join(self.download_slam_dir, base + ".csv")
-        try:
-            if os.path.exists(src_png):
-                shutil.copy2(src_png, dest_png)
-            if src_csv and os.path.exists(src_csv):
-                shutil.copy2(src_csv, dest_csv)
-            _log(f"Resultados también en Downloads/slam_logs: {dest_png}")
-            return dest_png
-        except Exception as e:
-            _log(f"Failed to store into Downloads/slam_logs: {e}")
-            return None
-
-    def _duplicate_to_downloads(self, output_dir, base_name):
-        public_dir, app_dir = _android_get_downloads_dirs()
-        if not public_dir and not app_dir:
-            return None
-        ts = os.path.basename(output_dir)
-        for root in (public_dir, app_dir):
-            if not root:
-                continue
-            try:
-                dest_dir = os.path.join(root, "SLAM_Results", ts)
-                os.makedirs(dest_dir, exist_ok=True)
-                for ext in (".png", ".csv"):
-                    src = os.path.join(output_dir, base_name + ext)
-                    if os.path.exists(src):
-                        shutil.copy2(src, os.path.join(dest_dir, base_name + ext))
-                _log(f"Results duplicated to: {os.path.abspath(dest_dir)}")
-                return dest_dir
-            except Exception as e:
-                _log(f"Failed to write into {root}: {e}")
-        return None
+    def _save_run_summary(self, output_dir, input_video_path, traj_points):
+        return su._save_run_summary(self, output_dir, input_video_path, traj_points)
 
     def save_trajectory_outputs(self, trajectory, input_video_path):
-        try:
-            tipo_lms = self.name
-            timestamp = datetime.now().strftime("%H%M_%d%m_%Y")
-            output_dir = os.path.join("resultados", tipo_lms, timestamp)
-            os.makedirs(output_dir, exist_ok=True)
-            output_base = os.path.join(output_dir, f"trayectoria_{self.name}")
-
-            with open(output_base + ".csv", "w", newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow(["X", "Z"])
-                writer.writerows(trajectory)
-            _log(f"CSV escrito: {os.path.abspath(output_base + '.csv')}")
-
-            num_keyframes = len(self.keyframe_poses)
-            avg_translation = self.total_translation_magnitude / max(1, self.total_pose_estimations)
-            avg_matches = self.total_tracked_matches / max(1, self.total_pose_estimations)
-            triangulation_success_rate = self.total_successful_frames / max(1, self.total_pose_estimations)
-
-            imu_state = "ON" if self._imu_on else "OFF"
-            info = [
-                f"Keyframes: {num_keyframes}",
-                f"Prom. matches/pose: {avg_matches:.1f}",
-                f"Éxito triangulación: {triangulation_success_rate:.2%}",
-                f"Mov. medio entre keyframes: {avg_translation:.2f} m",
-                f"IMU: {imu_state} | Peso: {self.imu_weight:.2f}",
-                f"Video: {os.path.basename(input_video_path)}",
-            ]
-
-            self._save_plot_cv(trajectory, output_base + ".png", info_lines=info)
-            self.last_output_dir = output_dir
-            _log(f"Results saved at: {os.path.abspath(output_dir)}")
-
-            self._also_save_to_downloads_slam_logs(output_base + ".png", output_base + ".csv")
-
-            dl_dir = self._duplicate_to_downloads(output_dir, f"trayectoria_{self.name}")
-            if dl_dir:
-                _log(f"Also available in Downloads/SLAM_Results: {dl_dir}")
-        except Exception as e:
-            _log(f"save_trajectory_outputs error: {e}")
-
-    def save_snapshot_to_downloads(self, tag="LIVE"):
-        try:
-            if not self.keyframe_poses:
-                _log("Snapshot skipped: no keyframes yet.")
-                return
-            traj_2d = np.array([[pose[0, 3], pose[2, 3]] for pose in self.keyframe_poses], dtype=float)
-            self.save_trajectory_outputs(traj_2d, input_video_path=str(tag))
-        except Exception as e:
-            _log(f"save_snapshot_to_downloads error: {e}")
+        return su.save_trajectory_outputs(self, trajectory, input_video_path)
 
     def process_video_input(self, video_path):
         try:
             video_capture = cv2.VideoCapture(video_path)
             if not video_capture.isOpened():
-                _log(f"No se pudo abrir video: {video_path}")
+                _log(f"No se pudo abrir video: {video_path}", "ERROR")
             while video_capture.isOpened():
                 success, frame = video_capture.read()
                 if not success:
                     break
                 self.process_frame(frame)
             video_capture.release()
-            traj_2d = np.array([[pose[0, 3], pose[2, 3]] for pose in self.keyframe_poses], dtype=float)
+
+            traj_2d = np.array(
+                [[pose[0, 3], pose[2, 3]] for pose in self.keyframe_poses],
+                dtype=float
+            )
             self.save_trajectory_outputs(traj_2d, video_path)
         except Exception as e:
-            _log(f"process_video_input error: {e}")
+            _log(f"process_video_input error: {e}\n{traceback.format_exc()}", "ERROR")

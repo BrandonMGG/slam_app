@@ -128,12 +128,21 @@ class Root(BoxLayout):
             bar_cam.add_widget(w)
         self.add_widget(bar_cam)
 
-        # -------- Widget Cámara --------
-        self.cam = AndroidCamera(index=0,
-                                 resolution=AndroidCamera.camera_resolution,
-                                 play=False)
-        APP_LOG.info(f"Cámara AndroidCamera creada: res={AndroidCamera.camera_resolution}")
-        self.add_widget(self.cam)
+        # -------- Contenedor Cámara (lazy init) --------
+        self.cam_container = BoxLayout(size_hint=(1, 1))
+        self.cam_status_lbl = Label(
+            text='Cámara no inicializada.\nPulsa "Iniciar cámara".',
+            halign='center',
+            valign='middle'
+        )
+        # fix de Kivy Label para multiline en BoxLayout
+        self.cam_status_lbl.bind(size=lambda *_: setattr(self.cam_status_lbl, 'text_size', self.cam_status_lbl.size))
+
+        self.cam_container.add_widget(self.cam_status_lbl)
+        self.add_widget(self.cam_container)
+
+        # guardamos ref a la cámara real, arranca en None
+        self.cam = None
 
         # -------- Barra SLAM en vivo --------
         bar_slam = BoxLayout(size_hint=(1, 0.12), spacing=6)
@@ -154,6 +163,7 @@ class Root(BoxLayout):
         self.fc = None
         if platform != "android":
             try:
+                from kivy.uix.filechooser import FileChooserIconView
                 self.fc = FileChooserIconView(
                     path=os.path.abspath("videos"),
                     filters=['*.mp4', '*.MP4'],
@@ -194,7 +204,7 @@ class Root(BoxLayout):
         self._ev_grab = Clock.schedule_interval(self._grab_frame_for_slam, 1/20)  # ~20 Hz
         APP_LOG.info(f"ClockEvents creados: tick={self._ev_tick}, grab={self._ev_grab}")
 
-    # ---------- runner limpio ----------
+    # ---------- crear / recrear runner ----------
     def _new_runner(self) -> SlamRunner:
         def _safe_refresh(path):
             if not self.runner or not self.runner.running:
@@ -213,9 +223,45 @@ class Root(BoxLayout):
             on_status=_safe_status,
         )
 
+    # ---------- inicialización diferida de la cámara ----------
+    def _init_camera_once(self):
+        """
+        Crea el widget AndroidCamera solo si todavía no existe.
+        Esto evita el crash al abrir la app sin permisos aún.
+        """
+        if self.cam is not None:
+            return  # ya creada
+
+        APP_LOG.info("Inicializando AndroidCamera bajo demanda…")
+        try:
+            cam = AndroidCamera(
+                index=0,
+                resolution=AndroidCamera.camera_resolution,
+                play=False
+            )
+            self.cam = cam
+            # reemplazar el placeholder del contenedor por la cámara real
+            self.cam_container.clear_widgets()
+            self.cam_container.add_widget(self.cam)
+            APP_LOG.info(f"Cámara AndroidCamera creada OK: res={AndroidCamera.camera_resolution}")
+        except Exception as e:
+            APP_LOG.exception(f"Error creando AndroidCamera: {e}")
+            self.cam = None
+            self.cam_container.clear_widgets()
+            self.cam_status_lbl.text = "Error iniciando cámara.\nRevisa los permisos en Ajustes."
+            self.cam_container.add_widget(self.cam_status_lbl)
+
     # ========== Cámara ==========
     def _start_cam(self, *_):
         APP_LOG.info("UI: Iniciar cámara (click)")
+        # asegurarnos que la cámara está creada
+        self._init_camera_once()
+
+        if self.cam is None:
+            self.lbl.text = 'No se pudo inicializar cámara (permiso?).'
+            APP_LOG.warning("Start cam: cámara sigue siendo None.")
+            return
+
         try:
             self.cam.play = True
             self.btn_start.disabled = True
@@ -228,6 +274,13 @@ class Root(BoxLayout):
 
     def _stop_cam(self, *_):
         APP_LOG.info("UI: Detener cámara (click)")
+        if self.cam is None:
+            self.lbl.text = 'Cámara detenida'
+            self.btn_start.disabled = False
+            self.btn_stop.disabled = True
+            APP_LOG.info("Stop cam: cámara era None.")
+            return
+
         try:
             self.cam.play = False
             self.btn_start.disabled = False
@@ -241,6 +294,9 @@ class Root(BoxLayout):
     def _rotate_cam(self, *_):
         APP_LOG.info("UI: Rotar cámara 90° (click)")
         try:
+            if self.cam is None:
+                APP_LOG.info("Rotar cámara: cámara no inicializada aún.")
+                return
             self.cam.rotate_next()
             self.lbl.text = f'Rotación: {self.cam.rot_k * 90}°'
             APP_LOG.info(f"Nueva rotación cam: {self.cam.rot_k * 90}°")
@@ -249,8 +305,10 @@ class Root(BoxLayout):
 
     def _tick(self, dt):
         try:
-            if self.cam.play:
-                self.lbl.text = f'Cámara: ON  |  Frames: {self.cam.frames}  |  Rot: {self.cam.rot_k*90}°'
+            if self.cam is not None and self.cam.play:
+                self.lbl.text = (
+                    f'Cámara: ON  |  Frames: {self.cam.frames}  |  Rot: {self.cam.rot_k*90}°'
+                )
             else:
                 self.lbl.text = 'Cámara: OFF'
         except Exception as e:
@@ -310,7 +368,9 @@ class Root(BoxLayout):
         # Pasa frames NV21 del provider android al runner, sin bloquear UI
         try:
             r = self.runner
-            if not (r and r.running and self.cam.play):
+            if not (r and r.running):
+                return
+            if self.cam is None or not self.cam.play:
                 return
 
             cam = self.cam
@@ -368,7 +428,9 @@ class Root(BoxLayout):
                     return
                 self.local_video = path
                 self._set_status(f"Video listo: {os.path.basename(path)}")
-                self.btn_run_video.disabled = False
+                self.btn_run_video = getattr(self, "btn_run_video", None)
+                if self.btn_run_video:
+                    self.btn_run_video.disabled = False
                 APP_LOG.info(f"Video (desktop) listo: {path}")
         except Exception as e:
             APP_LOG.exception(f"_pick_video error: {e}")
@@ -382,7 +444,9 @@ class Root(BoxLayout):
             dest = self.ss.copy_from_shared(shared_file_list[0])  # a carpeta privada
             self.local_video = dest
             self._set_status(f"Video listo: {os.path.basename(dest)}")
-            self.btn_run_video.disabled = False
+            self.btn_run_video = getattr(self, "btn_run_video", None)
+            if self.btn_run_video:
+                self.btn_run_video.disabled = False
             APP_LOG.info(f"Video (android) copiado a privado: {dest}")
         except Exception as e:
             APP_LOG.exception(f"No se pudo copiar el video: {e}")
@@ -400,7 +464,11 @@ class Root(BoxLayout):
                 APP_LOG.info("Deteniendo SLAM vivo antes de video…")
                 self._stop_slam()
 
-            self.btn_run_video.disabled = True
+        
+            self.btn_run_video = getattr(self, "btn_run_video", None)
+            if self.btn_run_video:
+                self.btn_run_video.disabled = True
+
             self.video_running = True
             self._set_status("Procesando SLAM (video)…")
 
@@ -469,7 +537,9 @@ class Root(BoxLayout):
             APP_LOG.exception(f"_show_result error: {e}")
 
     def _enable_video_btn(self):
-        self.btn_run_video.disabled = False
+        self.btn_run_video = getattr(self, "btn_run_video", None)
+        if self.btn_run_video:
+            self.btn_run_video.disabled = False
 
     # ========== util ==========
     def _refresh_preview(self, path):
@@ -499,8 +569,48 @@ class SLAMMobileApp(App):
         APP_LOG.info("UI construida correctamente.")
         return root
 
+    def _request_android_permissions(self):
+        """
+        Pide todos los permisos críticos al inicio:
+        - Cámara       (para capturar frames en vivo)
+        - Ubicación    (para GPS/distancia si se usa plyer)
+        - Almacenamiento (para guardar logs/plots en /sdcard/Download/slam_logs)
+        """
+        try:
+            from kivy.utils import platform as _platform
+            if _platform != 'android':
+                return
+
+            from android.permissions import request_permissions, Permission
+
+            perms = [
+                Permission.CAMERA,
+                Permission.WRITE_EXTERNAL_STORAGE,
+                Permission.READ_EXTERNAL_STORAGE,
+                Permission.ACCESS_COARSE_LOCATION,
+                Permission.ACCESS_FINE_LOCATION,
+            ]
+
+            # Android 13+ permisos granulares multimedia
+            try:
+                perms.append(Permission.READ_MEDIA_IMAGES)
+            except AttributeError:
+                pass
+            try:
+                perms.append(Permission.READ_MEDIA_VIDEO)
+            except AttributeError:
+                pass
+
+            request_permissions(perms)
+            APP_LOG.info("Permisos solicitados (Android): " + ", ".join(perms))
+
+        except Exception as e:
+            APP_LOG.exception(f'No se pudieron solicitar permisos Android: {e}')
+
     def on_start(self):
         APP_LOG.info("App.on_start()")
+        # Pedir permisos apenas arranca la app
+        self._request_android_permissions()
 
     def on_stop(self):
         APP_LOG.info("App.on_stop(): iniciando cleanup…")

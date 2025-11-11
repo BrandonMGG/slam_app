@@ -37,7 +37,7 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy,numpy,opencv,androidstorage4kivy,camera4kivy,gestures4kivy,pyjnius
+requirements = python3,kivy,numpy,opencv,androidstorage4kivy,camera4kivy,gestures4kivy,pyjnius,plyer
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -96,7 +96,8 @@ fullscreen = 0
 # (list) Permissions
 # (See https://python-for-android.readthedocs.io/en/latest/buildoptions/#build-options-1 for all the supported syntaxes and properties)
 #android.permissions = android.permission.INTERNET, (name=android.permission.WRITE_EXTERNAL_STORAGE;maxSdkVersion=18)
-android.permissions = CAMERA,READ_MEDIA_VIDEO
+android.permissions = CAMERA, READ_MEDIA_VIDEO, ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,INTERNET,FOREGROUND_SERVICE,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,READ_MEDIA_IMAGES
+
 android.grant_permissions = True
 
 # (list) features (adds uses-feature -tags to manifest)
