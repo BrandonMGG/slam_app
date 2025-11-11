@@ -1,0 +1,33 @@
+{
+  "runtime": {
+    "frames_total": 240,
+    "frames_success": 208,
+    "success_ratio": 0.8666666666666667,
+    "avg_frame_time_ms": 114.62546388308208,
+    "avg_fps_all": 8.724065021189354,
+    "avg_fps_recent_window": 8.724065021189354
+  },
+  "tracking_quality": {
+    "avg_inlier_ratio": 0.7961299657982422,
+    "avg_imu_rate_hz": 66.49975197202309,
+    "ekf_bias_last": -0.017713543719668042,
+    "ekf_yaw_last": -0.04248016767621321
+  },
+  "bandit_adaptation": {
+    "ctx_fast_frames": 10,
+    "ctx_normal_frames": 230,
+    "arms_counts": {
+      "N0": 40,
+      "N2": 79,
+      "N1": 111,
+      "F0": 4,
+      "F1": 6
+    },
+    "avg_reward": 0.0,
+    "orb_mode_final": "normal"
+  },
+  "pedestrian_odometry": {
+    "total_distance_m": 22.50576010667792,
+    "speed_peak_mps": 4.966852970644452
+  }
+}

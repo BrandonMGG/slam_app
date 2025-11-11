@@ -37,7 +37,7 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy,numpy,opencv,androidstorage4kivy
+requirements = python3,kivy,numpy,opencv,androidstorage4kivy,camera4kivy,gestures4kivy,pyjnius,plyer
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -96,17 +96,18 @@ fullscreen = 0
 # (list) Permissions
 # (See https://python-for-android.readthedocs.io/en/latest/buildoptions/#build-options-1 for all the supported syntaxes and properties)
 #android.permissions = android.permission.INTERNET, (name=android.permission.WRITE_EXTERNAL_STORAGE;maxSdkVersion=18)
-android.permissions = READ_MEDIA_VIDEO
+android.permissions = CAMERA, READ_MEDIA_VIDEO, ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,INTERNET,FOREGROUND_SERVICE,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,READ_MEDIA_IMAGES
+
 android.grant_permissions = True
 
 # (list) features (adds uses-feature -tags to manifest)
 #android.features = android.hardware.usb.host
 
 # (int) Target Android API, should be as high as possible.
-#android.api = 31
+android.api = 34
 
 # (int) Minimum API your APK / AAB will support.
-#android.minapi = 21
+android.minapi = 24
 
 # (int) Android SDK version to use
 #android.sdk = 20
@@ -115,7 +116,7 @@ android.grant_permissions = True
 #android.ndk = 23b
 
 # (int) Android NDK API to use. This is the minimum API your app will support, it should usually match android.minapi.
-#android.ndk_api = 21
+android.ndk_api = 24
 
 # (bool) Use --private data storage (True) or --dir public storage (False)
 #android.private_storage = True
@@ -181,6 +182,22 @@ android.grant_permissions = True
 # directory containing the files)
 #android.add_src =
 
+
+
+# --- NO STRIP: conserva símbolos nativos (tamaños más grandes, pero trazas útiles) ---
+android.strip = False
+
+# --- Pasar args extra a python-for-android (por si tu buildozer los respeta) ---
+# --no-strip evita que p4a quite símbolos; --debug compila en modo debug donde aplique
+android.add_arguments = --no-strip --debug
+
+# --- Variables de entorno dentro de la app (runtime) ---
+# Kivy más verboso, Python sin buffer (flush inmediato), logs de jnius, OpenCV a fichero
+# (Kivy leerá KIVY_LOG_LEVEL=debug; PyJNIUS imprimirá attach/detach de hilos y llamadas)
+# OpenCV escribirá logs en /sdcard/Download/slam_logs/opencv.log
+# OJO: si tu buildozer no soporta 'environment', haz lo del punto 2 en código.
+environment = KIVY_LOG_LEVEL=debug, PYTHONUNBUFFERED=1, PYJNIUS_LOGLEVEL=DEBUG, OPENCV_LOG_LEVEL=DEBUG, OPENCV_LOG_FILE=/sdcard/Download/slam_logs/opencv.log
+
 # (list) Android AAR archives to add
 #android.add_aars =
 
@@ -208,7 +225,7 @@ android.grant_permissions = True
 # (bool) Enable AndroidX support. Enable when 'android.gradle_dependencies'
 # contains an 'androidx' package, or any package from Kotlin source.
 # android.enable_androidx requires android.api >= 28
-#android.enable_androidx = True
+android.enable_androidx = True
 
 # (list) add java compile options
 # this can for example be necessary when importing certain java libraries using the 'android.gradle_dependencies' option
@@ -285,7 +302,7 @@ android.grant_permissions = True
 
 # (list) The Android archs to build for, choices: armeabi-v7a, arm64-v8a, x86, x86_64
 # In past, was `android.arch` as we weren't supporting builds for multiple archs at the same time.
-android.archs = arm64-v8a, armeabi-v7a
+android.archs = arm64-v8a
 
 # (int) overrides automatic versionCode computation (used in build.gradle)
 # this is not the same as app version and should only be edited if you know what you're doing
@@ -336,6 +353,8 @@ android.allow_backup = True
 
 # (str) Filename to the hook for p4a
 #p4a.hook =
+p4a.hook = camerax_provider/gradle_options.py
+p4a.archs = arm64-v8a
 
 # (str) Bootstrap to use for android builds
 # p4a.bootstrap = sdl2

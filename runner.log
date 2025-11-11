@@ -1,0 +1,732 @@
+15:51:41.960 [INFO] Runner init | log=/sdcard/Download/slam_logs/runner.log
+15:51:45.427 [INFO] Worker: iniciando…
+15:51:45.427 [INFO] Runner start. Python 3.11.5 | OpenCV 4.5.1 | numpy 1.22.3
+15:51:45.432 [DEBUG] cv2.setNumThreads(1)
+15:51:45.563 [INFO] PoseGraphSLAM creado correctamente.
+15:51:45.651 [DEBUG] preview skip: <2 poses
+15:51:45.654 [DEBUG] STATUS | enq=4 dq=1 dropQ=0 nv21_bad=0 conv_ok=1 slam_ok=1 slam_fail=0 prev_ok=1 prev_fail=0 qsize=3/3 qmax=3
+15:51:46.196 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:46.706 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:46.782 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:46.902 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:46.944 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:47.041 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:47.148 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:47.250 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:47.251 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:47.356 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:47.471 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:47.510 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:47.620 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:47.694 [DEBUG] STATUS | enq=42 dq=29 dropQ=10 nv21_bad=0 conv_ok=29 slam_ok=29 slam_fail=0 prev_ok=4 prev_fail=0 qsize=3/3 qmax=3
+15:51:47.784 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:47.820 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:47.821 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:48.114 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:48.273 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:48.349 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:48.418 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:48.856 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:48.901 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:48.906 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:49.016 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:49.062 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:49.111 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:49.214 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:49.363 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:49.409 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:49.424 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:49.527 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:49.623 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:49.723 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:49.767 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:49.771 [DEBUG] STATUS | enq=81 dq=52 dropQ=27 nv21_bad=0 conv_ok=52 slam_ok=52 slam_fail=0 prev_ok=8 prev_fail=0 qsize=2/3 qmax=3
+15:51:49.860 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:49.963 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:50.004 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:50.028 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:50.103 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:50.267 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:50.375 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:50.473 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:50.572 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:50.581 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:50.697 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:50.803 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:50.856 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:50.955 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:51.054 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:51.168 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:51.201 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:51.220 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:51.343 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:51.441 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:51.482 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:51.590 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:51.697 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:51.734 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:51.783 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:51.800 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:51.804 [DEBUG] STATUS | enq=121 dq=69 dropQ=49 nv21_bad=0 conv_ok=69 slam_ok=69 slam_fail=0 prev_ok=12 prev_fail=0 qsize=3/3 qmax=3
+15:51:51.885 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:51.997 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:52.105 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:52.217 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:52.259 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:52.354 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:52.415 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:52.416 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:52.530 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:52.631 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:52.777 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:52.886 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:52.923 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:52.939 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:53.037 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:53.132 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:53.240 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:53.286 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:53.448 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:53.476 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:53.490 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:53.652 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:53.813 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:53.829 [DEBUG] STATUS | enq=160 dq=88 dropQ=69 nv21_bad=0 conv_ok=88 slam_ok=88 slam_fail=0 prev_ok=15 prev_fail=0 qsize=3/3 qmax=3
+15:51:53.905 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:54.002 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:54.002 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:54.213 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:54.306 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:54.413 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:54.512 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:54.523 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:54.948 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:55.046 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:55.056 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:55.158 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:55.253 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:55.349 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:55.611 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:55.624 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:55.719 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:55.881 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:55.891 [DEBUG] STATUS | enq=200 dq=114 dropQ=83 nv21_bad=0 conv_ok=114 slam_ok=114 slam_fail=0 prev_ok=19 prev_fail=0 qsize=3/3 qmax=3
+15:51:55.982 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:56.074 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:56.171 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:56.171 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:56.338 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:56.447 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:56.568 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:56.608 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:56.661 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:56.682 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:56.710 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:56.815 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:56.867 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:56.975 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:57.073 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:57.171 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:57.190 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:57.207 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:57.324 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:57.374 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:57.490 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:57.523 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:57.632 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:57.678 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:57.697 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:57.771 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:57.826 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:57.934 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:57.984 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:57.989 [DEBUG] STATUS | enq=241 dq=130 dropQ=108 nv21_bad=0 conv_ok=130 slam_ok=130 slam_fail=0 prev_ok=23 prev_fail=0 qsize=3/3 qmax=3
+15:51:58.136 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:58.173 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:58.227 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:58.277 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:58.316 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:58.335 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:58.410 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:58.469 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:58.576 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:58.624 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:58.667 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:58.778 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:58.886 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:58.886 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:58.999 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:59.056 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:59.144 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:59.187 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:59.298 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:59.343 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:59.461 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:59.503 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:59.521 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:59.614 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:59.673 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:59.777 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:59.822 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:59.923 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:51:59.979 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:00.069 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:00.098 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:00.105 [DEBUG] STATUS | enq=282 dq=144 dropQ=135 nv21_bad=0 conv_ok=144 slam_ok=144 slam_fail=0 prev_ok=27 prev_fail=0 qsize=3/3 qmax=3
+15:52:00.194 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:00.259 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:00.346 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:00.396 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:00.447 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:00.556 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:00.601 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:00.618 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:00.724 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:00.787 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:00.901 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:00.946 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:01.002 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:01.052 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:01.161 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:01.200 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:01.227 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:01.263 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:01.373 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:01.420 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:01.470 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:01.583 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:01.685 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:01.730 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:01.757 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:01.776 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:01.887 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:01.927 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:02.047 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:02.082 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:02.108 [DEBUG] STATUS | enq=320 dq=155 dropQ=162 nv21_bad=0 conv_ok=155 slam_ok=155 slam_fail=0 prev_ok=30 prev_fail=0 qsize=3/3 qmax=3
+15:52:02.186 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:02.223 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:02.278 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:02.299 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:02.394 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:02.456 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:02.565 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:02.602 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:02.664 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:02.767 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:02.827 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:02.875 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:02.876 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:02.996 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:03.041 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:03.089 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:03.185 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:03.231 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:03.339 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:03.357 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:03.431 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:03.485 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:03.737 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:03.829 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:03.936 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:03.957 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:03.988 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:04.110 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:04.115 [DEBUG] STATUS | enq=358 dq=170 dropQ=186 nv21_bad=0 conv_ok=170 slam_ok=170 slam_fail=0 prev_ok=34 prev_fail=0 qsize=2/3 qmax=3
+15:52:04.213 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:04.254 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:04.372 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:04.528 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:04.569 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:04.570 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:04.694 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:04.789 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:04.837 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:04.944 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:05.047 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:05.089 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:05.137 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:05.137 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:05.306 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:05.358 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:05.456 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:05.505 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:05.679 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:05.724 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:05.767 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:05.833 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:05.833 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:05.943 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:06.005 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:06.112 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:06.159 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:06.208 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:06.222 [DEBUG] STATUS | enq=399 dq=185 dropQ=211 nv21_bad=0 conv_ok=185 slam_ok=185 slam_fail=0 prev_ok=37 prev_fail=0 qsize=3/3 qmax=3
+15:52:06.323 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:06.363 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:06.417 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:06.417 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:06.532 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:06.578 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:06.679 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:06.733 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:06.827 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:06.934 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:06.976 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:06.976 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:07.090 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:07.202 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:07.296 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:07.350 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:07.452 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:07.501 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:07.517 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:07.618 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:07.670 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:07.776 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:07.836 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:07.934 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:08.035 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:08.087 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:08.134 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:08.184 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:08.200 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:08.339 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:08.378 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:08.389 [DEBUG] STATUS | enq=440 dq=199 dropQ=238 nv21_bad=0 conv_ok=199 slam_ok=199 slam_fail=0 prev_ok=41 prev_fail=0 qsize=3/3 qmax=3
+15:52:08.477 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:08.693 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:08.735 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:08.736 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:08.881 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:08.920 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:09.029 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:09.121 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:09.237 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:09.251 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:09.275 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:09.390 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:09.481 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:09.686 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:09.761 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:09.832 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:09.956 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:10.051 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:10.156 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:10.205 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:10.242 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:10.339 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:10.390 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:10.403 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:10.406 [DEBUG] STATUS | enq=479 dq=218 dropQ=258 nv21_bad=0 conv_ok=218 slam_ok=218 slam_fail=0 prev_ok=45 prev_fail=0 qsize=3/3 qmax=3
+15:52:10.529 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:10.568 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+15:52:10.576 [INFO] Runner stop() solicitado (prev_running=True)
+15:52:10.627 [DEBUG] Llamando slam.close()…
+16:01:42.066 [INFO] Runner init | log=/sdcard/Download/slam_logs/runner.log
+16:01:46.360 [INFO] Worker: iniciando…
+16:01:46.360 [INFO] Runner start. Python 3.11.5 | OpenCV 4.5.1 | numpy 1.22.3
+16:01:46.370 [DEBUG] cv2.setNumThreads(1)
+16:01:46.469 [INFO] PoseGraphSLAM creado correctamente.
+16:01:46.672 [DEBUG] STATUS | enq=0 dq=0 dropQ=0 nv21_bad=0 conv_ok=0 slam_ok=0 slam_fail=0 prev_ok=0 prev_fail=0 qsize=0/3 qmax=0
+16:01:48.684 [DEBUG] STATUS | enq=0 dq=0 dropQ=0 nv21_bad=0 conv_ok=0 slam_ok=0 slam_fail=0 prev_ok=0 prev_fail=0 qsize=0/3 qmax=0
+16:01:50.701 [DEBUG] STATUS | enq=0 dq=0 dropQ=0 nv21_bad=0 conv_ok=0 slam_ok=0 slam_fail=0 prev_ok=0 prev_fail=0 qsize=0/3 qmax=0
+16:01:52.036 [DEBUG] preview skip: <2 poses
+16:01:52.622 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:52.622 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:52.735 [DEBUG] STATUS | enq=14 dq=10 dropQ=1 nv21_bad=0 conv_ok=10 slam_ok=10 slam_fail=0 prev_ok=2 prev_fail=0 qsize=3/3 qmax=3
+16:01:52.816 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:53.181 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:53.193 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:53.291 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:53.445 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:53.620 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:53.663 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:53.773 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:53.774 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:53.935 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:54.055 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:54.074 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:54.173 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:54.295 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:54.347 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:54.361 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:54.435 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:54.553 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:54.601 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:54.697 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:54.740 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:54.749 [DEBUG] STATUS | enq=53 dq=31 dropQ=19 nv21_bad=0 conv_ok=31 slam_ok=31 slam_fail=0 prev_ok=5 prev_fail=0 qsize=3/3 qmax=3
+16:01:54.844 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:54.902 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:54.914 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:54.987 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:55.110 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:55.145 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:55.307 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:55.406 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:55.417 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:55.492 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:55.703 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:55.789 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:55.957 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:56.017 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:56.029 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:56.097 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:56.198 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:56.323 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:56.362 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:56.414 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:56.466 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:56.587 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:56.626 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:56.671 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:56.672 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:56.767 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:56.773 [DEBUG] STATUS | enq=93 dq=49 dropQ=41 nv21_bad=0 conv_ok=49 slam_ok=49 slam_fail=0 prev_ok=9 prev_fail=0 qsize=3/3 qmax=3
+16:01:56.890 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:57.002 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:57.051 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:57.134 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:57.168 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:57.236 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:57.353 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:57.392 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:57.492 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:57.596 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:57.707 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:57.758 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:57.786 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:57.855 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:57.965 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:58.074 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:58.123 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:58.287 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:58.344 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:58.358 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:58.440 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:58.486 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:58.581 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:01:58.964 [DEBUG] STATUS | enq=128 dq=67 dropQ=61 nv21_bad=0 conv_ok=67 slam_ok=67 slam_fail=0 prev_ok=12 prev_fail=0 qsize=0/3 qmax=3
+16:02:00.981 [DEBUG] STATUS | enq=128 dq=67 dropQ=61 nv21_bad=0 conv_ok=67 slam_ok=67 slam_fail=0 prev_ok=12 prev_fail=0 qsize=0/3 qmax=3
+16:02:02.998 [DEBUG] STATUS | enq=128 dq=67 dropQ=61 nv21_bad=0 conv_ok=67 slam_ok=67 slam_fail=0 prev_ok=12 prev_fail=0 qsize=0/3 qmax=3
+16:02:05.015 [DEBUG] STATUS | enq=128 dq=67 dropQ=61 nv21_bad=0 conv_ok=67 slam_ok=67 slam_fail=0 prev_ok=12 prev_fail=0 qsize=0/3 qmax=3
+16:02:05.502 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:02:05.710 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:02:05.860 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:02:06.013 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:02:06.030 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:02:06.117 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:02:06.571 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:02:06.598 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:02:06.902 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:02:07.059 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:02:07.073 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:02:07.075 [DEBUG] STATUS | enq=161 dq=90 dropQ=68 nv21_bad=0 conv_ok=90 slam_ok=90 slam_fail=0 prev_ok=16 prev_fail=0 qsize=3/3 qmax=3
+16:02:07.211 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:02:07.418 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:02:07.631 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:02:07.644 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:02:07.720 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:02:09.091 [DEBUG] STATUS | enq=175 dq=103 dropQ=72 nv21_bad=0 conv_ok=103 slam_ok=103 slam_fail=0 prev_ok=17 prev_fail=0 qsize=0/3 qmax=3
+16:02:09.407 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:02:09.634 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:02:09.850 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:02:09.934 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:02:09.946 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:02:10.830 [INFO] Runner stop() solicitado (prev_running=True)
+16:02:11.028 [DEBUG] Llamando slam.close()…
+16:49:16.250 [INFO] Runner init | log=/sdcard/Download/slam_logs/runner.log
+16:49:18.633 [INFO] Worker: iniciando…
+16:49:18.634 [INFO] Runner start. Python 3.11.5 | OpenCV 4.5.1 | numpy 1.22.3
+16:49:18.644 [DEBUG] cv2.setNumThreads(1)
+16:49:18.768 [INFO] PoseGraphSLAM creado correctamente.
+16:49:18.822 [DEBUG] preview skip: <2 poses
+16:49:18.826 [DEBUG] STATUS | enq=3 dq=1 dropQ=0 nv21_bad=0 conv_ok=1 slam_ok=1 slam_fail=0 prev_ok=1 prev_fail=0 qsize=2/3 qmax=2
+16:49:19.129 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:19.376 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:19.387 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:19.595 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:19.802 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:19.879 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:19.953 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:20.119 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:20.222 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:20.331 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:20.435 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:20.482 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:20.493 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:20.602 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:20.705 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:20.803 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:20.910 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:20.952 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:20.976 [DEBUG] STATUS | enq=44 dq=26 dropQ=15 nv21_bad=0 conv_ok=26 slam_ok=26 slam_fail=0 prev_ok=4 prev_fail=0 qsize=3/3 qmax=3
+16:49:21.059 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:21.071 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:21.217 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:21.259 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:21.304 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:21.460 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:21.563 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:21.580 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:21.656 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:21.763 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:21.802 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:21.916 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:21.952 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:22.057 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:22.111 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:22.129 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:22.212 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:22.262 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:22.370 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:22.481 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:22.591 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:22.629 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:22.647 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:22.768 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:22.889 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:22.935 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:23.057 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:23.097 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:23.121 [DEBUG] STATUS | enq=85 dq=43 dropQ=39 nv21_bad=0 conv_ok=43 slam_ok=43 slam_fail=0 prev_ok=8 prev_fail=0 qsize=3/3 qmax=3
+16:49:23.209 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:23.227 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:23.313 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:23.758 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:23.841 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:23.894 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:23.996 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:24.101 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:24.200 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:24.253 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:24.268 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:24.387 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:24.493 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:24.531 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:24.641 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:24.738 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:24.849 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:24.874 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:24.947 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:25.016 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:25.052 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:25.166 [DEBUG] STATUS | enq=124 dq=65 dropQ=56 nv21_bad=0 conv_ok=65 slam_ok=65 slam_fail=0 prev_ok=12 prev_fail=0 qsize=3/3 qmax=3
+16:49:25.259 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:25.364 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:25.413 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:25.414 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:25.535 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:25.643 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:25.741 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:25.783 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:25.888 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:25.927 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:25.958 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:25.979 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:26.084 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:26.197 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:26.297 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:26.402 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:26.443 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:26.459 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:26.568 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:26.669 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:26.770 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:26.817 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:26.910 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:27.024 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:27.069 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:27.082 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:27.205 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:27.217 [DEBUG] STATUS | enq=163 dq=81 dropQ=79 nv21_bad=0 conv_ok=81 slam_ok=81 slam_fail=0 prev_ok=16 prev_fail=0 qsize=3/3 qmax=3
+16:49:27.306 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:27.355 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:27.455 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:27.563 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:27.614 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:27.662 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:27.693 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:27.715 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:27.836 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:27.890 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:27.990 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:28.042 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:28.129 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:28.180 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:28.202 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:28.284 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:28.338 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:28.391 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:28.497 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:28.599 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:28.652 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:28.756 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:28.808 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:28.830 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:28.914 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:28.971 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:29.019 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:29.074 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:29.174 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:29.228 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:29.264 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:29.280 [DEBUG] STATUS | enq=203 dq=93 dropQ=107 nv21_bad=0 conv_ok=93 slam_ok=93 slam_fail=0 prev_ok=19 prev_fail=0 qsize=3/3 qmax=3
+16:49:29.365 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:29.435 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:29.467 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:29.468 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:29.600 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:29.655 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:29.755 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:29.811 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:29.896 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:29.959 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:29.976 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:30.002 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:30.136 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:30.180 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:30.280 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:30.336 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:30.444 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:30.493 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:30.547 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:30.564 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:30.641 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:30.706 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:30.754 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:30.854 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:30.897 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:30.947 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:31.002 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:31.110 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:31.154 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:31.201 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:31.252 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:31.253 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:31.374 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:31.381 [DEBUG] STATUS | enq=243 dq=104 dropQ=136 nv21_bad=0 conv_ok=104 slam_ok=104 slam_fail=0 prev_ok=23 prev_fail=0 qsize=3/3 qmax=3
+16:49:31.468 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:31.513 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:31.554 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:31.662 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:31.719 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:31.733 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:31.843 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:31.883 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:31.991 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:32.040 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:32.086 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:32.129 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:32.243 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:32.297 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:32.297 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:32.400 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:32.466 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:32.505 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:32.612 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:32.714 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:32.760 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:32.824 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:32.868 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:32.895 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:32.979 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:33.035 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:33.145 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:33.189 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:33.308 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:33.369 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:33.381 [DEBUG] STATUS | enq=281 dq=115 dropQ=163 nv21_bad=0 conv_ok=115 slam_ok=115 slam_fail=0 prev_ok=26 prev_fail=0 qsize=3/3 qmax=3
+16:49:33.462 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:33.515 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:33.559 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:33.579 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:33.664 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:33.719 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:33.762 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:33.864 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:33.907 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:33.954 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:34.055 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:34.114 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:34.163 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:34.180 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:34.286 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:34.340 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:34.454 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:34.507 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:34.555 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:34.650 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:34.708 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:34.755 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:34.803 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:34.804 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:34.916 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:34.959 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:35.074 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:35.127 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:35.232 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:35.325 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:35.343 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:35.427 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:35.439 [DEBUG] STATUS | enq=321 dq=127 dropQ=191 nv21_bad=0 conv_ok=127 slam_ok=127 slam_fail=0 prev_ok=30 prev_fail=0 qsize=3/3 qmax=3
+16:49:35.545 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:35.594 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:35.649 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:35.743 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:35.797 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:35.897 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:35.955 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:35.956 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:36.083 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:36.127 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:36.246 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:36.280 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:36.337 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:36.398 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:36.491 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:36.539 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:36.598 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:36.598 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:36.721 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:36.768 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:36.820 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:36.922 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:36.981 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:37.087 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:37.129 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:37.158 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:37.185 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:37.295 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:37.339 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:37.446 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:37.489 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:37.502 [DEBUG] STATUS | enq=360 dq=138 dropQ=219 nv21_bad=0 conv_ok=138 slam_ok=138 slam_fail=0 prev_ok=33 prev_fail=0 qsize=3/3 qmax=3
+16:49:37.598 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:37.642 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:37.698 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:37.698 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:37.877 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:38.037 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:38.159 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:38.264 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:38.283 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:38.306 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:38.417 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:38.513 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:38.614 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:38.707 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:38.810 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:38.810 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:38.934 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:39.048 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:39.140 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:39.347 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:39.398 [DEBUG] preview saved: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:39.398 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:39.554 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:39.560 [DEBUG] STATUS | enq=398 dq=158 dropQ=238 nv21_bad=0 conv_ok=158 slam_ok=158 slam_fail=0 prev_ok=37 prev_fail=0 qsize=2/3 qmax=3
+16:49:39.654 [DEBUG] Cola llena: se descartó 1 frame (policy: drop oldest).
+16:49:39.711 [DEBUG] Llamando slam.close()…
+16:49:39.711 [INFO] Runner stop() solicitado (prev_running=True)
