@@ -106,11 +106,28 @@ buildozer -v android debug deploy run
 
 Esta sección resume el comportamiento del sistema en un teléfono Android real, tanto en recorridos interiores como exteriores, y muestra el impacto de la fusión visual–inercial ligera y del ajustador UCB1 sobre perfiles discretos. No se incluyen todas las tablas del documento de tesis, solo los resultados más relevantes para entender cómo se comporta el sistema en la práctica.
 
-![Ruta teórica interior Int1](docs/img/int1_ruta_teorica.svg)
-![Trayectorias prácticas interior Int1 (3 ejecuciones)](docs/img/int1_trayectorias_ejec1_3.svg)
+A continuacion se presentan las figuras, que representan tanto los recorridos téoricos como los prácticos:
 
-![Ruta teórica exterior Ext1](docs/img/ext1_ruta_teorica.svg)
-![Trayectorias prácticas exterior Ext1 (3 ejecuciones)](docs/img/ext1_trayectorias_ejec1_3.svg)
+
+![Ruta teórica interior Int1](https://github.com/user-attachments/assets/f6f78816-dd5a-421c-826e-d1f6e72157f1)
+
+Ruta teórica interior Int1
+
+![Trayectorias prácticas interior Int1 (3 ejecuciones)](https://github.com/user-attachments/assets/ddb4891e-dcef-404c-a03a-767aafb4d2dd)
+
+Trayectorias prácticas interior Int1 (3 ejecuciones)
+
+
+![Ruta teórica exterior Ext1](https://github.com/user-attachments/assets/a20ceb3d-a27c-4090-8796-3ebb8a085f64)
+
+Ruta teórica exterior Ext1
+
+
+![Trayectorias prácticas exterior Ext1 (3 ejecuciones)](https://github.com/user-attachments/assets/62a6199c-dfaf-4b93-aaf3-05629086a085)
+
+Trayectorias prácticas exterior Ext1 (3 ejecuciones)
+
+
 
 ### Escenarios de prueba
 
