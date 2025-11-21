@@ -353,7 +353,7 @@ android.allow_backup = True
 
 # (str) Filename to the hook for p4a
 #p4a.hook =
-p4a.hook = camerax_provider/gradle_options.py
+#p4a.hook = camerax_provider/gradle_options.py
 p4a.archs = arm64-v8a
 
 # (str) Bootstrap to use for android builds
