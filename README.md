@@ -87,7 +87,15 @@ En el teléfono Android, habilitar las opciones de desarrollador.
 ```bash
   adb devices
 ```
+O inalambricamente: 
 
+  Opcion de Depuración Inalambrica
+  Vincular Dispositivo con un codigo
+  En la consola del PC:
+  ```bash
+  adb pair ip:puerto
+  adb connect ip:puerto
+  ```
 ### 4. Compilar el APK con Buildozer
 
 Desde la raíz del proyecto (buildozer.spec), ejecutar:
@@ -101,6 +109,75 @@ Con el dispositivo conectado y reconocido por adb, se puede compilar, instalar y
 ```bash
 buildozer -v android debug deploy run
 ```
+
+
+## Arquitectura del sistema
+
+El sistema se ejecuta íntegramente en el teléfono Android. La aplicación captura fotogramas de la cámara y lecturas inerciales (giroscopio y acelerómetro), estima una trayectoria 2D en vista superior y registra métricas por fotograma para análisis posterior. Todo el procesamiento es local y el lazo de estimación trabaja con una cadencia limitada de forma explícita (del orden de 20 Hz) para respetar el presupuesto temporal y térmico del dispositivo.
+
+### Visión general
+
+A nivel de contexto, el usuario interactúa con una aplicación Android que coordina tres elementos principales: la cámara, los sensores inerciales y el almacenamiento local. La app inicia y detiene la captura, muestra la trayectoria estimada en tiempo real y permite exportar los resultados de cada sesión (logs y figuras).
+
+![Diagrama de contexto del sistema](https://github.com/user-attachments/assets/c15be013-c60f-4094-ad2c-d625dc6837cb)
+
+
+Diagrama de contexto del sistema (usuario, sensores, aplicación y almacenamiento local)
+
+### Bloques principales
+
+Internamente, la arquitectura se organiza en bloques funcionales que separan captura, estimación y registro de resultados. Esta separación permite mantener el camino crítico libre de bloqueos y facilita la depuración en dispositivo.
+
+![Bloques del núcleo y flujos](https://github.com/user-attachments/assets/920dc5a1-0595-44f1-86cf-56eac803db04)
+
+
+Bloques del núcleo y flujos principales del sistema
+
+Los bloques principales son:
+
+- Interfaz gráfica y runner  
+  Muestra la vista de cámara y la trayectoria 2D en tiempo real. Permite iniciar y detener la captura y el procesamiento, y ofrece la opción de guardar los artefactos de la sesión. La interfaz envía solo banderas de control para no bloquear el procesamiento.
+
+- Módulo de captura y sincronización  
+  Recibe los fotogramas de la cámara con su marca de tiempo y consolida una ventana de lecturas de IMU alrededor de cada instante. Aplica la rotación discreta correspondiente a la orientación física del dispositivo y entrega al núcleo imágenes listas para procesar.
+
+- Módulo de odometría visual (VO)  
+  Ejecuta detección y descripción ORB, emparejamiento binario por distancia de Hamming y estimación robusta de la matriz esencial mediante RANSAC. A partir de los inliers y el paralaje decide aceptar o rechazar el incremento de pose. Si la calidad es baja, conserva el último estado válido para evitar saltos.
+
+- Módulo de fusión inercial ligera  
+  Recibe la rotación estimada por VO y la combina con la señal de la IMU mediante un filtro ligero centrado en el rumbo (yaw) y el sesgo. Aplica actualizaciones de velocidad cero (ZUPT) cuando el sistema está en reposo y limita la contribución inercial si hay desincronización entre cámara e IMU.
+
+- Módulo de generación de trayectoria 2D  
+  Proyecta la pose estabilizada en un plano fijo y actualiza la polilínea que representa la ruta estimada. Esta trayectoria se envía a la interfaz para su visualización y se registra para análisis fuera de línea.
+
+- Módulo de observabilidad y resultados  
+  Registra métricas por fotograma (fps, inliers, paralaje, banderas de aceptación y causas de rechazo, entre otras) y genera, al final de la sesión, un log detallado y un resumen con estadísticas agregadas. La escritura se hace fuera del hilo crítico.
+
+- Módulo de ajuste adaptativo (bandido multi-brazo)  
+  Consume métricas agregadas en ventanas de tiempo y selecciona, mediante una política tipo UCB1, un perfil discreto de parámetros (por ejemplo, umbrales de VO y peso de la fusión inercial). Las decisiones se aplican a baja frecuencia y con permanencia mínima para evitar oscilaciones de configuración.
+
+### Flujo de datos por fotograma
+
+El flujo por fotograma sigue siempre la misma ruta: captura, estimación geométrica, estabilización, trayectoria y registro. Este diseño reduce la complejidad del camino crítico y mantiene la latencia controlada en el dispositivo móvil.
+
+![Diagrama de flujo por fotograma](https://github.com/user-attachments/assets/3d8f26c4-a074-4a7a-9ca5-1202de604530)
+
+
+Flujo por fotograma desde la captura hasta la actualización de la trayectoria
+
+De forma resumida, el ciclo de cada fotograma es:
+
+1. La cámara entrega un fotograma en escala de grises con su marca de tiempo.
+2. El proveedor de IMU entrega una ventana de lecturas de giroscopio y acelerómetro centrada en ese instante.
+3. El módulo de odometría visual ejecuta ORB, emparejamiento y RANSAC para estimar la pose relativa y las métricas de calidad.
+4. Se decide aceptar o rechazar el incremento de pose según inliers y paralaje. Si se rechaza, se mantiene el último estado válido.
+5. Si se acepta, la fusión inercial ligera estabiliza el rumbo con la ventana inercial asociada y aplica, cuando corresponde, ZUPT en reposo.
+6. La pose estabilizada actualiza la trayectoria 2D, que se dibuja en la interfaz.
+7. Se registran métricas por fotograma y, cada cierto número de cuadros, el módulo de bandido actualiza el perfil de parámetros según las recompensas internas.
+
+Este esquema mantiene un lazo visual-inercial ligero, ajustable mediante perfiles discretos y con registro suficiente para analizar el comportamiento del sistema en escenarios de interior y exterior.
+
+
 
 ## Resultados destacados
 
