@@ -1,0 +1,172 @@
+15:51:41 | INFO | MainThread | APP | Logger APP listo -> /sdcard/Download/slam_logs/main.log
+15:51:41 | INFO | MainThread | APP | AS4K disponible (Chooser/SharedStorage OK).
+15:51:41 | INFO | MainThread | APP | Proceso iniciado. Py=3.11.5 | plataforma=android
+15:51:41 | INFO | MainThread | APP | App.build()
+15:51:41 | INFO | MainThread | APP | Construyendo Root UI…
+15:51:41 | INFO | MainThread | APP | Cámara AndroidCamera creada: res=(640, 480)
+15:51:41 | INFO | MainThread | APP | SharedStorage & Chooser listos.
+15:51:41 | INFO | MainThread | APP | Preview path para SLAM en vivo: /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:41 | INFO | MainThread | APP | Creando nuevo SlamRunner…
+15:51:41 | INFO | MainThread | APP | SlamRunner instanciado correctamente (id=496247104784).
+15:51:41 | INFO | MainThread | APP | ClockEvents creados: tick=<ClockEvent (0.5) callback=<bound method Root._tick of <__main__.Root object at 0x738081e7b0>>>, grab=<ClockEvent (0.05) callback=<bound method Root._grab_frame_for_slam of <__main__.Root object at 0x738081e7b0>>>
+15:51:41 | INFO | MainThread | APP | UI construida correctamente.
+15:51:41 | INFO | MainThread | APP | App.on_start()
+15:51:43 | INFO | MainThread | APP | UI: Iniciar cámara (click)
+15:51:43 | INFO | MainThread | APP | Cámara -> ON
+15:51:45 | INFO | MainThread | APP | UI: Iniciar SLAM vivo (click)
+15:51:45 | INFO | MainThread | APP | Runner -> START OK
+15:51:45 | INFO | MainThread | APP | STATUS: SLAM: corriendo…
+15:51:45 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:46 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:46 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:47 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:47 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:48 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:48 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:49 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:50 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:50 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:51 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:51 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:52 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:52 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:53 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:54 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:54 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:55 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:55 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:56 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:56 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:57 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:57 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:58 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:58 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:51:59 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:00 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:00 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:01 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:01 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:02 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:02 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:03 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:04 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:04 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:05 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:05 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:06 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:07 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:07 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:08 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:08 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:09 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:09 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:10 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+15:52:10 | INFO | MainThread | APP | UI: Detener SLAM vivo (click)
+16:01:41 | INFO | MainThread | APP | Logger APP listo -> /sdcard/Download/slam_logs/main.log
+16:01:41 | INFO | MainThread | APP | AS4K disponible (Chooser/SharedStorage OK).
+16:01:41 | INFO | MainThread | APP | Proceso iniciado. Py=3.11.5 | plataforma=android
+16:01:41 | INFO | MainThread | APP | App.build()
+16:01:41 | INFO | MainThread | APP | Construyendo Root UI…
+16:01:42 | INFO | MainThread | APP | Cámara AndroidCamera creada: res=(640, 480)
+16:01:42 | INFO | MainThread | APP | SharedStorage & Chooser listos.
+16:01:42 | INFO | MainThread | APP | Preview path para SLAM en vivo: /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:42 | INFO | MainThread | APP | Creando nuevo SlamRunner…
+16:01:42 | INFO | MainThread | APP | SlamRunner instanciado correctamente (id=496081896592).
+16:01:42 | INFO | MainThread | APP | ClockEvents creados: tick=<ClockEvent (0.5) callback=<bound method Root._tick of <__main__.Root object at 0x7380c867b0>>>, grab=<ClockEvent (0.05) callback=<bound method Root._grab_frame_for_slam of <__main__.Root object at 0x7380c867b0>>>
+16:01:42 | INFO | MainThread | APP | UI construida correctamente.
+16:01:42 | INFO | MainThread | APP | App.on_start()
+16:01:42 | INFO | MainThread | APP | UI: Iniciar cámara (click)
+16:01:43 | INFO | MainThread | APP | Cámara -> ON
+16:01:44 | INFO | MainThread | APP | UI: Detener cámara (click)
+16:01:44 | INFO | MainThread | APP | Cámara -> OFF
+16:01:46 | INFO | MainThread | APP | UI: Iniciar SLAM vivo (click)
+16:01:46 | INFO | MainThread | APP | Runner -> START OK
+16:01:46 | INFO | MainThread | APP | STATUS: SLAM: corriendo…
+16:01:51 | INFO | MainThread | APP | UI: Iniciar cámara (click)
+16:01:51 | INFO | MainThread | APP | Cámara -> ON
+16:01:52 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:52 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:53 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:53 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:54 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:54 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:55 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:56 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:56 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:57 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:57 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:58 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:01:58 | INFO | MainThread | APP | UI: Detener cámara (click)
+16:01:58 | INFO | MainThread | APP | Cámara -> OFF
+16:02:05 | INFO | MainThread | APP | UI: Iniciar cámara (click)
+16:02:05 | INFO | MainThread | APP | Cámara -> ON
+16:02:05 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:02:06 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:02:06 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:02:07 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:02:07 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:02:07 | INFO | MainThread | APP | UI: Detener cámara (click)
+16:02:07 | INFO | MainThread | APP | Cámara -> OFF
+16:02:09 | INFO | MainThread | APP | UI: Iniciar cámara (click)
+16:02:09 | INFO | MainThread | APP | Cámara -> ON
+16:02:09 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:02:09 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:02:10 | INFO | MainThread | APP | UI: Detener cámara (click)
+16:02:10 | INFO | MainThread | APP | Cámara -> OFF
+16:02:10 | INFO | MainThread | APP | UI: Detener SLAM vivo (click)
+16:49:15 | INFO | MainThread | APP | Logger APP listo -> /sdcard/Download/slam_logs/main.log
+16:49:16 | INFO | MainThread | APP | AS4K disponible (Chooser/SharedStorage OK).
+16:49:16 | INFO | MainThread | APP | Proceso iniciado. Py=3.11.5 | plataforma=android
+16:49:16 | INFO | MainThread | APP | App.build()
+16:49:16 | INFO | MainThread | APP | Construyendo Root UI…
+16:49:16 | INFO | MainThread | APP | Cámara AndroidCamera creada: res=(640, 480)
+16:49:16 | INFO | MainThread | APP | SharedStorage & Chooser listos.
+16:49:16 | INFO | MainThread | APP | Preview path para SLAM en vivo: /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:16 | INFO | MainThread | APP | Creando nuevo SlamRunner…
+16:49:16 | INFO | MainThread | APP | SlamRunner instanciado correctamente (id=496259142416).
+16:49:16 | INFO | MainThread | APP | ClockEvents creados: tick=<ClockEvent (0.5) callback=<bound method Root._tick of <__main__.Root object at 0x73807ea890>>>, grab=<ClockEvent (0.05) callback=<bound method Root._grab_frame_for_slam of <__main__.Root object at 0x73807ea890>>>
+16:49:16 | INFO | MainThread | APP | UI construida correctamente.
+16:49:16 | INFO | MainThread | APP | App.on_start()
+16:49:16 | INFO | MainThread | APP | UI: Iniciar cámara (click)
+16:49:17 | INFO | MainThread | APP | Cámara -> ON
+16:49:18 | INFO | MainThread | APP | UI: Iniciar SLAM vivo (click)
+16:49:18 | INFO | MainThread | APP | Runner -> START OK
+16:49:18 | INFO | MainThread | APP | STATUS: SLAM: corriendo…
+16:49:18 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:19 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:19 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:20 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:21 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:21 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:22 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:22 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:23 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:23 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:24 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:24 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:25 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:26 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:26 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:27 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:27 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:28 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:28 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:29 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:30 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:30 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:31 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:31 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:32 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:32 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:33 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:34 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:34 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:35 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:36 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:36 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:37 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:37 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:38 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:38 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:39 | INFO | MainThread | APP | Preview actualizado -> /sdcard/Download/slam_logs/plots/live_preview.png
+16:49:39 | INFO | MainThread | APP | UI: Detener SLAM vivo (click)
