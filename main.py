@@ -207,9 +207,10 @@ class Root(BoxLayout):
     # ---------- crear / recrear runner ----------
     def _new_runner(self) -> SlamRunner:
         def _safe_refresh(path):
+            # Nota: se permite refrescar aunque el runner ya no este corriendo,
+            # para mostrar la ruta corregida por loop closure al detener SLAM.
             if not self.runner or not self.runner.running:
-                APP_LOG.info(f"on_preview ignorado (runner no running). path={path}")
-                return
+                APP_LOG.info(f"on_preview post-stop (loop closure). path={path}")
             Clock.schedule_once(lambda dt: self._refresh_preview(path), 0)
 
         def _safe_status(s):
@@ -221,6 +222,7 @@ class Root(BoxLayout):
             preview_period=0.5,
             on_preview=_safe_refresh,
             on_status=_safe_status,
+            loop_closure=True,   # corregir la ruta al detener SLAM
         )
 
     # ---------- inicialización diferida de la cámara ----------

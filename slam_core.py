@@ -380,7 +380,8 @@ class PoseGraphSLAM:
     - Métricas adicionales (fps, dt_ms, distancia acumulada, flags de corrección, etc.)
     """
     def __init__(self, fx=700, fy=700, cx=320, cy=240,
-                 imu_min_rate_hz=40.0, imu_max_var=1.0):
+                 imu_min_rate_hz=40.0, imu_max_var=1.0,
+                 bandit_mode='ucb'):
         # Cámara
         self.fx, self.fy, self.cx, self.cy = fx, fy, cx, cy
         self.camera_matrix = np.array(
@@ -392,6 +393,7 @@ class PoseGraphSLAM:
 
         # Estado trayectoria
         self.keyframe_poses = []
+        self.keyframe_stamps = []  # timestamp (s) por keyframe, alineado con keyframe_poses
         self.prev_kf_pts = None
         self.prev_kf_desc = None
         self.prev_kf_pose_vo = np.eye(4)
@@ -408,6 +410,7 @@ class PoseGraphSLAM:
 
         # Política de keyframe
         self.frame_counter = 0
+        self._frame_seq = 0
         self.min_frame_gap = 6
         self.min_keyframe_translation = 0.06
         self.min_matches = 55
@@ -446,14 +449,19 @@ class PoseGraphSLAM:
         self.vo_reboot_N = 18
 
         # ---- Bandit (UCB1) por contexto ----
-        self.enable_bandit = True
-        self._bandit_selector = BanditSelector(
-            min_parallax_px=self.min_parallax_px,
-            arm_cooldown=20,
-            orb_cooldown=35,
-            change_penalty=0.04,
-            orb_change_penalty=0.05,
-        )
+        # bandit_mode: 'ucb' (aprende), 'off' (umbrales adaptativos legacy),
+        # 'fixed:<arm>' (brazo forzado sin aprendizaje, para ablacion A/B).
+        self.bandit_mode = str(bandit_mode)
+        self.enable_bandit = self.bandit_mode != 'off'
+        forced = None
+        if self.bandit_mode.startswith('fixed:'):
+            forced = self.bandit_mode.split(':', 1)[1]
+        self._bandit_selector = BanditSelector(block_len=12, forced_arm=forced)
+        self.bandit_state_path = None  # si se define, close() persiste el estado
+
+        # ---- Loop closure (al finalizar la corrida; default OFF) ----
+        self.enable_loop_closure = False
+        self._kf_store = None
 
         # --- Métricas de rendimiento de frame / FPS ---
         self._fps = FPSTracker(alpha=0.4)
@@ -472,7 +480,7 @@ class PoseGraphSLAM:
 
     # ----------------- Helpers -----------------
 
-    def _try_vo_reboot(self, frame_idx, kps, desc, diag):
+    def _try_vo_reboot(self, frame_idx, t, kps, desc, diag):
         """Reinicializa keyframe tras fallos consecutivos de VO. Retorna True si hizo reboot."""
         if self._vo_fail_count < self.vo_reboot_N:
             return False
@@ -482,6 +490,7 @@ class PoseGraphSLAM:
                     self.keyframe_poses.append(self.prev_kf_pose_world.copy())
                 else:
                     self.keyframe_poses.append(np.eye(4))
+                self.keyframe_stamps.append(float(t))
                 self.prev_kf_pts = np.array([kp.pt for kp in kps], dtype=np.float32)
                 self.prev_kf_desc = np.ascontiguousarray(desc.copy(), dtype=np.uint8)
                 self.frame_counter = 0
@@ -511,10 +520,13 @@ class PoseGraphSLAM:
 
     # ----------------- Main frame -----------------
 
-    def process_frame(self, frame):
+    def process_frame(self, frame, t=None):
         frame_t0 = time.time()
+        if t is None:
+            t = frame_t0
 
-        frame_idx = self.total_pose_estimations + self.frame_counter
+        frame_idx = self._frame_seq
+        self._frame_seq += 1
         reason = None
         vo_rebooted = False
 
@@ -523,6 +535,7 @@ class PoseGraphSLAM:
             self.vo.orb_mode, self.total_translation_magnitude,
             self._vo_fail_count,
         )
+        diag["t"] = float(t)
 
         try:
             if frame is None or frame.size == 0:
@@ -575,10 +588,6 @@ class PoseGraphSLAM:
                     ransac_thr = min(bsel['ransac'], 1.5)
                     min_par = max(bsel['min_par'], 0.70)
 
-                    if bsel['orb_changed']:
-                        self.vo.set_orb_mode(bsel['orb'])
-                        _log(f"[{frame_idx}] ORB->{bsel['orb'].upper()} (bandit)", 'DEBUG')
-
                     diag['bandit_ctx'] = bandit_ctx
                     diag['bandit_arm'] = bsel['arm_name']
                     diag['bandit_ucb'] = bsel['ucb_val']
@@ -586,6 +595,7 @@ class PoseGraphSLAM:
                     diag['orb_changed'] = bsel['orb_changed']
                     diag['cooldown_arm'] = bsel['cooldown_arm']
                     diag['cooldown_orb'] = bsel['cooldown_orb']
+                    diag['bandit_override'] = bsel.get('override', 0)
 
                 except Exception as _e_b:
                     _log(f"[{frame_idx}] Bandit error: {_e_b}", 'WARNING')
@@ -632,7 +642,7 @@ class PoseGraphSLAM:
                     # VO falló en alguna etapa
                     reason = vo_r.reason
                     self._vo_fail_count += 1
-                    vo_rebooted = self._try_vo_reboot(frame_idx, kps, desc, diag)
+                    vo_rebooted = self._try_vo_reboot(frame_idx, t, kps, desc, diag)
                     _log(f"[{frame_idx}] {reason}", "DEBUG")
                     self.frame_counter += 1
                     return
@@ -651,6 +661,11 @@ class PoseGraphSLAM:
                 # Fusión EKF (VO -> medida de yaw)
                 inlier_ratio = vo_r.inlier_ratio
                 yaw_vo = _yaw_from_Ry(R_vo)
+                # Innovacion de yaw (VO vs prediccion EKF): proxy de consistencia
+                # de pose usado por el reward del bandit
+                diag['yaw_innov_deg'] = float(
+                    np.rad2deg(abs(_wrap_pi(yaw_vo - self.ekf.yaw)))
+                )
                 r_meas = np.deg2rad(max(1.5, 8.0*(1.0 - min(1.0, inlier_ratio))))**2
                 if inlier_ratio < 0.40:
                     r_meas *= 2.5
@@ -696,6 +711,9 @@ class PoseGraphSLAM:
                 )
                 if add_kf:
                     self.keyframe_poses.append(curr_world.copy())
+                    self.keyframe_stamps.append(float(t))
+                    if self.enable_loop_closure:
+                        self._store_keyframe(kps, desc)
                     self.prev_kf_pts = np.array([kp.pt for kp in kps], dtype=np.float32)
                     self.prev_kf_desc = np.ascontiguousarray(desc.copy(), dtype=np.uint8)
                     self.prev_kf_pose_vo = curr_vo
@@ -718,6 +736,7 @@ class PoseGraphSLAM:
             else:
                 # primer KF
                 self.keyframe_poses.append(np.eye(4))
+                self.keyframe_stamps.append(float(t))
                 self.prev_kf_pts = (
                     None if not kps else np.array([kp.pt for kp in kps], dtype=np.float32)
                 )
@@ -765,7 +784,50 @@ class PoseGraphSLAM:
             # -------- LOG A slam_core.log --------
             log_diag(diag)
 
+    # ----------------- Loop closure (offline) -----------------
+
+    def _store_keyframe(self, kps, desc):
+        """Guarda descriptores del keyframe recien agregado para loop closure."""
+        try:
+            if self._kf_store is None:
+                from slam.loop_closure import KeyframeStore
+                self._kf_store = KeyframeStore(every=3, max_entries=300)
+            pts = np.array([kp.pt for kp in kps], dtype=np.float32) if kps else None
+            self._kf_store.maybe_add(len(self.keyframe_poses) - 1, pts, desc)
+        except Exception as e:
+            _log(f"_store_keyframe error: {e}", "WARNING")
+
+    def run_loop_closure(self):
+        """Detecta y aplica cierres de bucle sobre keyframe_poses (offline).
+        Conservador: si no hay cierres verificados o el costo no baja, no toca nada.
+        Devuelve dict de info."""
+        if not self.enable_loop_closure or self._kf_store is None:
+            return {'accepted': False, 'reason': 'store vacio o LC deshabilitado'}
+        from slam.loop_closure import run_loop_closure as _run_lc
+        poses_opt, info = _run_lc(
+            self.keyframe_poses, self._kf_store, self.camera_matrix,
+            logger=lambda m: _log(m, "INFO"),
+        )
+        if poses_opt is not None:
+            self.keyframe_poses = poses_opt
+        return info
+
     # ----------------- Outputs -----------------
+
+    def close(self):
+        """Cierra la corrida: acredita el bloque pendiente del bandit y
+        persiste su estado si bandit_state_path esta definido."""
+        try:
+            self._bandit_selector.flush()
+            if self.bandit_state_path:
+                self._bandit_selector.save_state(self.bandit_state_path)
+                _log(f"Bandit state guardado en: {self.bandit_state_path}", "INFO")
+        except Exception as e:
+            _log(f"close() bandit error: {e}", "WARNING")
+        try:
+            self.imu.stop()
+        except Exception:
+            pass
 
     def optimize_pose_graph(self):
         if not self.keyframe_poses:
@@ -782,25 +844,33 @@ class PoseGraphSLAM:
     def _save_run_summary(self, output_dir, input_video_path, traj_points):
         return su._save_run_summary(self, output_dir, input_video_path, traj_points)
 
-    def save_trajectory_outputs(self, trajectory, input_video_path):
-        return su.save_trajectory_outputs(self, trajectory, input_video_path)
+    def save_trajectory_outputs(self, trajectory, input_video_path, output_dir=None):
+        return su.save_trajectory_outputs(self, trajectory, input_video_path, output_dir=output_dir)
 
-    def process_video_input(self, video_path):
+    def process_video_input(self, video_path, output_dir=None, max_frames=None):
         try:
             video_capture = cv2.VideoCapture(video_path)
             if not video_capture.isOpened():
                 _log(f"No se pudo abrir video: {video_path}", "ERROR")
+            fps = video_capture.get(cv2.CAP_PROP_FPS) or 30.0
+            if fps <= 0:
+                fps = 30.0
+            n_frame = 0
             while video_capture.isOpened():
                 success, frame = video_capture.read()
                 if not success:
                     break
-                self.process_frame(frame)
+                self.process_frame(frame, t=n_frame / fps)
+                n_frame += 1
+                if max_frames is not None and n_frame >= max_frames:
+                    break
             video_capture.release()
+            self._bandit_selector.flush()
 
             traj_2d = np.array(
                 [[pose[0, 3], pose[2, 3]] for pose in self.keyframe_poses],
                 dtype=float
             )
-            self.save_trajectory_outputs(traj_2d, video_path)
+            self.save_trajectory_outputs(traj_2d, video_path, output_dir=output_dir)
         except Exception as e:
             _log(f"process_video_input error: {e}\n{traceback.format_exc()}", "ERROR")

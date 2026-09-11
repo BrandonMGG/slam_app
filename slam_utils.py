@@ -241,9 +241,9 @@ _IMU_LOG = _make_logger("IMU")
 
 def _save_diagnostics_csv(slam, output_dir):
     try:
+        from slam.metrics import _DIAG_KEYS
         path = os.path.join(output_dir, "diagnosticos_por_frame.csv")
-        keys = ["frame_idx","n_kps","n_matches","parallax_med_px","inliers","inlier_ratio",
-                "ekf_yaw","ekf_bias","imu_rate","imu_var","keyframe_added","reason"]
+        keys = list(_DIAG_KEYS)
         with open(path, "w", newline="", encoding="utf-8") as f:
             w = csv.DictWriter(f, fieldnames=keys)
             w.writeheader()
@@ -273,14 +273,44 @@ def _save_run_summary(slam, output_dir, input_video_path, traj_points):
     except Exception as e:
         _log(f"_save_run_summary error: {e}\n{traceback.format_exc()}", "ERROR")
 
-def save_trajectory_outputs(slam, trajectory, input_video_path):
+def save_trajectory_tum(slam, output_dir):
+    """
+    Exporta la trayectoria de keyframes en formato TUM:
+    'timestamp tx ty tz qx qy qz qw' (y=0, cuaternión de rotación pura alrededor de Y),
+    consumible por evo (evo_ape/evo_rpe/evo_traj).
+    """
+    try:
+        poses = getattr(slam, "keyframe_poses", [])
+        stamps = getattr(slam, "keyframe_stamps", [])
+        if len(stamps) != len(poses):
+            _log(f"save_trajectory_tum: stamps({len(stamps)}) != poses({len(poses)}); "
+                 "se omite el export TUM.", "WARNING")
+            return None
+        path = os.path.join(output_dir, "trajectory_tum.txt")
+        with open(path, "w", encoding="utf-8") as f:
+            for T, t in zip(poses, stamps):
+                yaw = float(np.arctan2(T[0, 2], T[2, 2]))
+                qy = np.sin(yaw / 2.0)
+                qw = np.cos(yaw / 2.0)
+                f.write(f"{t:.6f} {T[0,3]:.6f} 0.000000 {T[2,3]:.6f} "
+                        f"0.000000 {qy:.6f} 0.000000 {qw:.6f}\n")
+        _log(f"Trayectoria TUM guardada en: {os.path.abspath(path)}", "INFO")
+        return path
+    except Exception as e:
+        _log(f"save_trajectory_tum error: {e}\n{traceback.format_exc()}", "ERROR")
+        return None
+
+def save_trajectory_outputs(slam, trajectory, input_video_path, output_dir=None):
     """
     Guardado de CSV/PNG + resumen, sin tocar cálculos.
     """
     try:
-        tipo_lms = getattr(slam, "name", "slam")
-        timestamp = datetime.now().strftime("%H%M_%d%m_%Y")
-        output_dir = os.path.join("resultados", tipo_lms, timestamp)
+        if output_dir is None:
+            tipo_lms = getattr(slam, "name", "slam")
+            timestamp = datetime.now().strftime("%H%M_%d%m_%Y")
+            output_dir = os.path.join("resultados", tipo_lms, timestamp)
+        else:
+            tipo_lms = getattr(slam, "name", "slam")
         os.makedirs(output_dir, exist_ok=True)
         output_base = os.path.join(output_dir, f"trayectoria_{tipo_lms}")
 
@@ -310,6 +340,7 @@ def save_trajectory_outputs(slam, trajectory, input_video_path):
         cv2.imwrite(output_base + ".png", canvas)
 
         # Guardar diagnósticos y resumen
+        save_trajectory_tum(slam, output_dir)
         _save_diagnostics_csv(slam, output_dir)
         _save_run_summary(slam, output_dir, input_video_path, trajectory)
 

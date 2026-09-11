@@ -22,11 +22,11 @@ source.include_exts = py,png,jpg,kv,atlas
 #source.exclude_exts = spec
 
 # (list) List of directory to exclude (let empty to not exclude anything)
-#source.exclude_dirs = tests, bin, venv
+source.exclude_dirs = tests, bin, venv, .venv, datasets, results, resultados, eval, docs, videos, __pycache__, .git
 
 # (list) List of exclusions using pattern matching
 # Do not prefix with './'
-#source.exclude_patterns = license,images/*/*.jpg
+source.exclude_patterns = run_headless.py, metrics_summary.json, observaciones_revisores.md, build.log
 
 # (str) Application versioning (method 1)
 version = 0.1

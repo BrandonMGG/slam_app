@@ -1,24 +1,27 @@
+import json
 import math
+import os
 
 
 class LightBandit:
-    def __init__(self, k, c=1.4, ewma_lambda=0.05, ewma_mix=0.5):
+    """UCB1 con Q efectivo = mezcla de promedio incremental y EWMA.
+    Rewards esperados en [0, 1]."""
+
+    def __init__(self, k, c=0.6, ewma_lambda=0.05, ewma_mix=0.3):
         self.k = int(k)
         self.c = float(c)
         self.counts = [0] * self.k
         self.values = [0.0] * self.k   # promedio incremental
         self.ewma = [0.0] * self.k     # media exponencial (suaviza no-estacionariedad)
         self.total = 0
-        self.ewma_lambda = float(ewma_lambda)  # ~0.05
-        self.ewma_mix = float(ewma_mix)        # mezcla entre Q y EWMA en seleccion
+        self.ewma_lambda = float(ewma_lambda)
+        self.ewma_mix = float(ewma_mix)
 
     def _eff_Q(self, a):
         # combinacion convexa entre Q (promedio) y EWMA (reciente)
         return (1.0 - self.ewma_mix) * self.values[a] + self.ewma_mix * self.ewma[a]
 
     def select(self):
-        # UCB1 con Q efectivo
-        self.total += 1
         for a in range(self.k):
             if self.counts[a] == 0:
                 return a, float('inf')
@@ -26,7 +29,7 @@ class LightBandit:
         best_a, best_ucb = 0, -1e9
         for a in range(self.k):
             Qe = self._eff_Q(a)
-            bonus = self.c * (math.sqrt(ln_t / max(1, self.counts[a])))
+            bonus = self.c * math.sqrt(ln_t / max(1, self.counts[a]))
             u = Qe + bonus
             if u > best_ucb:
                 best_ucb, best_a = u, a
@@ -34,174 +37,229 @@ class LightBandit:
 
     def update(self, a, r):
         a = int(a)
+        self.total += 1
         self.counts[a] += 1
         n = self.counts[a]
         q = self.values[a]
-        # promedio incremental clasico
         self.values[a] = q + (float(r) - q) / float(n)
-        # EWMA (mas peso a lo reciente)
         lam = self.ewma_lambda
         self.ewma[a] = (1.0 - lam) * self.ewma[a] + lam * float(r)
 
 
+# Brazos deliberadamente separados dentro de los guardrails de slam_core
+# (ratio <= 0.85, ransac <= 1.5, min_par >= 0.70). Sin dimension ORB: el modo
+# ORB lo gobierna en exclusiva el bloque adaptativo de slam_core.
 DEFAULT_BANDIT_ARMS = {
     'normal': [
-        {'name': 'N0', 'ratio': 0.70, 'ransac': 0.70, 'min_par': 1.2,  'orb': 'normal'},
-        {'name': 'N1', 'ratio': 0.80, 'ransac': 0.90, 'min_par': 0.95, 'orb': 'normal'},
-        {'name': 'N2', 'ratio': 0.83, 'ransac': 1.00, 'min_par': 0.90, 'orb': 'fast'},
+        {'name': 'N0', 'ratio': 0.65, 'ransac': 0.60, 'min_par': 1.50},  # conservador
+        {'name': 'N1', 'ratio': 0.75, 'ransac': 1.00, 'min_par': 1.00},  # medio
+        {'name': 'N2', 'ratio': 0.85, 'ransac': 1.50, 'min_par': 0.70},  # agresivo
     ],
     'fast': [
-        {'name': 'F0', 'ratio': 0.80, 'ransac': 1.00, 'min_par': 0.90, 'orb': 'fast'},
-        {'name': 'F1', 'ratio': 0.83, 'ransac': 1.20, 'min_par': 0.85, 'orb': 'fast'},
-        {'name': 'F2', 'ratio': 0.75, 'ransac': 1.00, 'min_par': 0.85, 'orb': 'normal'},
+        {'name': 'F0', 'ratio': 0.75, 'ransac': 1.00, 'min_par': 1.00},
+        {'name': 'F1', 'ratio': 0.80, 'ransac': 1.20, 'min_par': 0.85},
+        {'name': 'F2', 'ratio': 0.85, 'ransac': 1.50, 'min_par': 0.70},
     ],
 }
 
-DEFAULT_SAFE_ARMS = {'normal': 'N2', 'fast': 'F1'}
+DEFAULT_SAFE_ARMS = {'normal': 'N1', 'fast': 'F1'}
+
+_STATE_VERSION = 2  # invalida estados guardados si cambia la config de brazos
+
+
+def _arms_signature(cfg):
+    parts = []
+    for ctx in sorted(cfg):
+        for arm in cfg[ctx]:
+            parts.append(f"{ctx}/{arm['name']}:{arm['ratio']}/{arm['ransac']}/{arm['min_par']}")
+    return "|".join(parts)
 
 
 class BanditSelector:
     """
-    Seleccion adaptativa de parametros VO usando LightBandit (UCB1).
-    Encapsula arm configs, cooldowns, safe overrides y reward.
+    Seleccion adaptativa de parametros VO con UCB1 por bloques de tenencia.
+
+    - El brazo elegido se mantiene fijo block_len frames; el reward de esos
+      frames se agrega (media) en UN solo update del bandit (muestras
+      correlacionadas no inflan counts).
+    - Frames bajo safe-override (vo_fail_count >= 2) NO se acreditan a nadie.
+    - compute_reward es pura (sin estado global compartido entre brazos).
+    - forced_arm: fuerza un brazo fijo sin aprendizaje (ablacion A/B).
     """
-    def __init__(self, min_parallax_px=1.2,
-                 arm_cooldown=20, orb_cooldown=35,
-                 change_penalty=0.04, orb_change_penalty=0.05,
-                 arms_cfg=None, safe_arms=None):
-        self._cfg = arms_cfg or self._build_default_arms(min_parallax_px)
+
+    def __init__(self, block_len=12, arms_cfg=None, safe_arms=None,
+                 forced_arm=None, c=0.6):
+        self._cfg = arms_cfg or {k: [dict(a) for a in v]
+                                 for k, v in DEFAULT_BANDIT_ARMS.items()}
         self._safe_arm = safe_arms or dict(DEFAULT_SAFE_ARMS)
+        self._bandit = {ctx: LightBandit(len(self._cfg[ctx]), c=c)
+                        for ctx in self._cfg}
+        self.block_len = int(block_len)
+        self.forced_arm = forced_arm
 
-        self._bandit = {
-            ctx: LightBandit(len(self._cfg[ctx]), c=1.4)
-            for ctx in self._cfg
-        }
+        # Bloque de tenencia vigente: None o dict(ctx, arm_idx, start, rewards)
+        self._block = None
+        self._override_active = False
 
-        self.arm_cooldown = int(arm_cooldown)
-        self.orb_cooldown = int(orb_cooldown)
-        self._last_arm_switch = {ctx: -10**9 for ctx in self._cfg}
-        self._prev_arm = {ctx: None for ctx in self._cfg}
-        self._last_orb_switch = -10**9
+    # ----------------- helpers -----------------
 
-        self.change_penalty = float(change_penalty)
-        self.orb_change_penalty = float(orb_change_penalty)
+    def _arm_by_name(self, ctx, name):
+        for i, c in enumerate(self._cfg[ctx]):
+            if c['name'] == name:
+                return i, c
+        return 0, self._cfg[ctx][0]
 
-        self._reward_ma = 0.0
-        self._have_reward_ma = False
-
-    @staticmethod
-    def _build_default_arms(min_parallax_px):
-        mp = float(min_parallax_px)
-        cfg = {}
-        for ctx, arms in DEFAULT_BANDIT_ARMS.items():
-            cfg[ctx] = []
-            for arm in arms:
-                a = dict(arm)
-                if ctx == 'normal':
-                    if arm['name'] == 'N0':
-                        a['min_par'] = mp
-                    elif arm['name'] == 'N1':
-                        a['min_par'] = max(0.95, mp)
-                cfg[ctx].append(a)
-        return cfg
-
-    def select(self, bandit_ctx, frame_idx, vo_fail_count, current_orb_mode):
-        """Selecciona parametros VO para el frame actual."""
-        B = self._bandit[bandit_ctx]
-        arm_idx, ucb_val = B.select()
-        cfg = self._cfg[bandit_ctx][arm_idx]
-
-        result = {
-            'arm_changed': 0,
-            'orb_changed': 0,
-            'cooldown_arm': 0,
-            'cooldown_orb': 0,
-        }
-
-        # Safe override si venimos con fallos recientes de VO
-        if vo_fail_count >= 2:
-            safe_name = self._safe_arm.get(bandit_ctx, cfg['name'])
-            for i_c, c in enumerate(self._cfg[bandit_ctx]):
-                if c['name'] == safe_name:
-                    cfg = c
-                    arm_idx = i_c
-                    break
-
-        desired_orb = cfg['orb']
-
-        # Cooldown ORB
-        if desired_orb != current_orb_mode:
-            if (frame_idx - self._last_orb_switch) >= self.orb_cooldown:
-                self._last_orb_switch = frame_idx
-                result['orb_changed'] = 1
-            else:
-                result['cooldown_orb'] = 1
-                desired_orb = current_orb_mode
-
-        # Cooldown ARM
-        prev_arm = self._prev_arm.get(bandit_ctx, None)
-        if prev_arm is not None and cfg['name'] != prev_arm:
-            if (frame_idx - self._last_arm_switch[bandit_ctx]) < self.arm_cooldown:
-                for i_c, c in enumerate(self._cfg[bandit_ctx]):
-                    if c['name'] == prev_arm:
-                        cfg = c
-                        arm_idx = i_c
-                        break
-                result['cooldown_arm'] = 1
-
-        if cfg['name'] != prev_arm:
-            self._prev_arm[bandit_ctx] = cfg['name']
-            self._last_arm_switch[bandit_ctx] = frame_idx
-            result['arm_changed'] = 1
-
-        result.update({
+    def _result(self, ctx, arm_idx, ucb_val, arm_changed, override=0):
+        cfg = self._cfg[ctx][arm_idx]
+        return {
             'ratio': float(cfg['ratio']),
             'ransac': float(cfg['ransac']),
             'min_par': float(cfg['min_par']),
-            'orb': desired_orb,
+            'orb': None,             # sin dimension ORB: no tocar el modo
             'arm_name': cfg['name'],
             'arm_idx': arm_idx,
             'ucb_val': float(ucb_val),
-        })
-        return result
+            'arm_changed': int(arm_changed),
+            'orb_changed': 0,
+            'cooldown_arm': 0,
+            'cooldown_orb': 0,
+            'override': int(override),
+        }
+
+    def _flush_block(self, discard=False):
+        """Cierra el bloque vigente; si no discard, acredita la media al brazo."""
+        blk = self._block
+        self._block = None
+        if blk is None or discard or not blk['rewards']:
+            return
+        mean_r = sum(blk['rewards']) / len(blk['rewards'])
+        self._bandit[blk['ctx']].update(blk['arm_idx'], mean_r)
+
+    def flush(self):
+        """Cerrar al final de la corrida (acredita el bloque pendiente)."""
+        self._flush_block(discard=False)
+
+    # ----------------- API principal -----------------
+
+    def select(self, bandit_ctx, frame_idx, vo_fail_count, current_orb_mode=None):
+        """Selecciona parametros VO para el frame actual."""
+        # Brazo forzado (modo fixed:XX para ablacion)
+        if self.forced_arm is not None:
+            idx, _ = self._arm_by_name(bandit_ctx, self.forced_arm)
+            return self._result(bandit_ctx, idx, 0.0, arm_changed=0)
+
+        # Safe-override: brazo seguro, y el bloque en curso se descarta
+        if vo_fail_count >= 2:
+            self._flush_block(discard=True)
+            self._override_active = True
+            idx, _ = self._arm_by_name(bandit_ctx, self._safe_arm.get(bandit_ctx))
+            return self._result(bandit_ctx, idx, 0.0, arm_changed=0, override=1)
+
+        self._override_active = False
+
+        blk = self._block
+        # Cambio de contexto: acreditar lo acumulado y abrir bloque nuevo
+        if blk is not None and blk['ctx'] != bandit_ctx:
+            self._flush_block(discard=False)
+            blk = None
+        # Expiracion del bloque
+        if blk is not None and (frame_idx - blk['start']) >= self.block_len:
+            self._flush_block(discard=False)
+            blk = None
+
+        if blk is None:
+            arm_idx, ucb_val = self._bandit[bandit_ctx].select()
+            prev_arm = getattr(self, '_last_arm', {}).get(bandit_ctx)
+            self._block = {'ctx': bandit_ctx, 'arm_idx': arm_idx,
+                           'start': frame_idx, 'rewards': []}
+            if not hasattr(self, '_last_arm'):
+                self._last_arm = {}
+            changed = int(prev_arm is not None and prev_arm != arm_idx)
+            self._last_arm[bandit_ctx] = arm_idx
+            return self._result(bandit_ctx, arm_idx, ucb_val, arm_changed=changed)
+
+        return self._result(bandit_ctx, blk['arm_idx'], 0.0, arm_changed=0)
 
     def compute_reward(self, diag):
-        """Calcula reward suavizado con EMA global."""
-        fail_flag = 1 if (
-            diag.get('inlier_ratio', 0.0) <= 1e-9 or
-            (diag.get('reason', '').startswith('E0') and diag.get('reason') != '')
-        ) else 0
+        """Reward puro por frame, en [0, 1]. Sin estado compartido entre brazos.
 
-        reward = (
-            0.6 * float(diag.get('inlier_ratio', 0.0)) +
-            0.3 * (1.0 if diag.get('keyframe_added', 0) == 1 else 0.0) -
-            0.5 * fail_flag
-        )
+        Terminos:
+          - inliers absolutos (no inlier_ratio: ese sube al aflojar ransac)
+          - consistencia de pose: innovacion de yaw VO vs prediccion EKF
+          - costo computacional del frame (presupuesto ~15 fps)
+          - fallo de VO
+        """
+        reason = diag.get('reason', '') or ''
+        fail = 1.0 if (reason.startswith('E0') or
+                       float(diag.get('inlier_ratio', 0.0)) <= 1e-9) else 0.0
 
-        if int(diag.get('arm_changed', 0)) == 1:
-            reward -= self.change_penalty
-        if int(diag.get('orb_changed', 0)) == 1:
-            reward -= self.orb_change_penalty
+        r_inl = min(1.0, float(diag.get('inliers', 0)) / 150.0)
+        cost = min(1.0, float(diag.get('frame_dt_ms', 0.0)) / 66.0)
 
-        reward = max(-1.0, min(1.0, float(reward)))
-
-        # Suavizado EMA global corto
-        if not self._have_reward_ma:
-            self._reward_ma = float(reward)
-            self._have_reward_ma = True
+        if int(diag.get('ekf_update', 0)) == 1:
+            innov = float(diag.get('yaw_innov_deg', 0.0))
+            r_acc = 1.0 - min(1.0, innov / 8.0)
+            r = 0.4 * r_inl + 0.3 * r_acc - 0.2 * cost - 1.0 * fail
         else:
-            self._reward_ma = 0.5 * float(reward) + 0.5 * float(self._reward_ma)
+            r = 0.7 * r_inl - 0.2 * cost - 1.0 * fail
 
-        return float(self._reward_ma)
+        r = max(-1.0, min(1.0, r))
+        return (r + 1.0) / 2.0   # normalizado a [0,1] para UCB
 
     def update(self, bandit_ctx, arm_name, reward):
-        """Actualiza el bandit con el reward del brazo usado."""
-        cfgs = self._cfg[bandit_ctx]
-        for i, c in enumerate(cfgs):
-            if c['name'] == arm_name:
-                self._bandit[bandit_ctx].update(i, reward)
-                return self._bandit[bandit_ctx].values[i], self._bandit[bandit_ctx].counts[i]
-        return 0.0, 0
+        """Acumula el reward del frame en el bloque vigente.
+        Devuelve (Q_efectivo, N) del brazo para diagnostico."""
+        idx, _ = self._arm_by_name(bandit_ctx, arm_name)
+        B = self._bandit[bandit_ctx]
+
+        if self.forced_arm is not None or self._override_active:
+            return B._eff_Q(idx), B.counts[idx]
+
+        blk = self._block
+        if blk is not None and blk['ctx'] == bandit_ctx and blk['arm_idx'] == idx:
+            blk['rewards'].append(float(reward))
+        return B._eff_Q(idx), B.counts[idx]
+
+    # ----------------- persistencia -----------------
+
+    def save_state(self, path):
+        state = {
+            'version': _STATE_VERSION,
+            'signature': _arms_signature(self._cfg),
+            'bandits': {
+                ctx: {'counts': B.counts, 'values': B.values,
+                      'ewma': B.ewma, 'total': B.total}
+                for ctx, B in self._bandit.items()
+            },
+        }
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(state, f, indent=2)
+
+    def load_state(self, path):
+        """Carga estado previo; lo descarta si la config de brazos cambio.
+        Devuelve True si se cargo."""
+        if not os.path.exists(path):
+            return False
+        try:
+            with open(path, encoding='utf-8') as f:
+                state = json.load(f)
+            if state.get('version') != _STATE_VERSION:
+                return False
+            if state.get('signature') != _arms_signature(self._cfg):
+                return False
+            for ctx, s in state.get('bandits', {}).items():
+                if ctx not in self._bandit:
+                    continue
+                B = self._bandit[ctx]
+                if len(s['counts']) != B.k:
+                    return False
+                B.counts = [int(x) for x in s['counts']]
+                B.values = [float(x) for x in s['values']]
+                B.ewma = [float(x) for x in s['ewma']]
+                B.total = int(s['total'])
+            return True
+        except Exception:
+            return False
 
     @property
     def bandits(self):

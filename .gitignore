@@ -36,3 +36,13 @@ htmlcov/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Datos, experimentos y artefactos locales (no versionar)
+datasets/
+results/
+Proyecto/
+Proyecto.zip
+fin/
+final/
+logsFinales/
+observaciones_revisores.md

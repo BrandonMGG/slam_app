@@ -36,6 +36,7 @@ def make_diag(frame_idx, ekf_yaw, ekf_bias, orb_mode,
     """Crea el dict de diagnosticos inicial para un frame."""
     return {
         "frame_idx": frame_idx,
+        "t": 0.0,
         "n_kps": 0,
         "n_matches": 0,
         "parallax_med_px": 0.0,
@@ -60,6 +61,8 @@ def make_diag(frame_idx, ekf_yaw, ekf_bias, orb_mode,
         "bandit_ucb": 0.0,
         "cooldown_arm": 0,
         "cooldown_orb": 0,
+        "bandit_override": 0,
+        "yaw_innov_deg": 0.0,
         "arm_changed": 0,
         "orb_changed": 0,
         "frame_dt_ms": 0.0,
@@ -123,7 +126,7 @@ def sample_perf(perf, frame_idx, diag):
 # ==============================
 
 _DIAG_KEYS = [
-    'frame_idx', 'frame_dt_ms', 'fps_inst', 'fps_avg',
+    'frame_idx', 't', 'frame_dt_ms', 'fps_inst', 'fps_avg',
     'n_kps', 'n_matches', 'parallax_med_px', 'inliers', 'inlier_ratio',
     'trans_mag', 'total_distance',
     'ekf_yaw', 'ekf_bias', 'ekf_update',
@@ -133,6 +136,7 @@ _DIAG_KEYS = [
     'bandit_ctx', 'bandit_arm', 'bandit_reward',
     'bandit_Q', 'bandit_N', 'bandit_ucb',
     'cooldown_arm', 'cooldown_orb', 'arm_changed', 'orb_changed',
+    'bandit_override', 'yaw_innov_deg',
 ]
 
 def log_diag(diag):

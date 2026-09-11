@@ -56,11 +56,14 @@ def _ver_str():
     return f"Python {sys.version.split()[0]} | OpenCV {cv_ver} | numpy {np_ver}"
 
 class SlamRunner:
-    def __init__(self, preview_path, preview_period=0.5, on_preview=None, on_status=None):
+    def __init__(self, preview_path, preview_period=0.5, on_preview=None, on_status=None,
+                 loop_closure=False):
         self.preview_path = preview_path
         self.preview_period = float(preview_period)
         self.on_preview = on_preview or (lambda p: None)
         self.on_status = on_status or (lambda s: None)
+        # Al detener SLAM: detectar cierres de bucle y corregir la ruta (offline)
+        self.loop_closure = bool(loop_closure)
 
         self.running = False
         self._q = Queue(maxsize=3)
@@ -185,9 +188,10 @@ class SlamRunner:
         try:
             from slam_core import PoseGraphSLAM
             slam = PoseGraphSLAM()
+            slam.enable_loop_closure = self.loop_closure
             with self._state_lock:
                 self._slam = slam
-            _log("info", "PoseGraphSLAM creado correctamente.")
+            _log("info", f"PoseGraphSLAM creado correctamente (loop_closure={self.loop_closure}).")
         except Exception as e:
             msg = f"No se pudo importar/crear SLAM: {e}"
             _log("error", msg + "\n" + traceback.format_exc())
@@ -276,11 +280,58 @@ class SlamRunner:
                     last_status = now
 
         finally:
+            # Loop closure offline al detener (si esta habilitado)
+            lc_ran = False
+            if slam is not None and self.loop_closure:
+                lc_ran = True
+                try:
+                    self.on_status("SLAM detenido. Buscando cierres de bucle…")
+                except Exception:
+                    pass
+                try:
+                    info = slam.run_loop_closure()
+                    if info.get("accepted"):
+                        n_loops = info.get("n_candidates_verified", 0)
+                        msg = f"Loop closure: {n_loops} cierres aplicados ✓"
+                        try:
+                            self._render_preview_with_video_style(slam, self.preview_path)
+                            self.on_preview(self.preview_path)
+                        except Exception as pe:
+                            _log("error", f"preview post-LC error: {pe}")
+                    else:
+                        msg = "Loop closure: sin cierres confiables (ruta sin cambios)"
+                    _log("info", f"{msg} | detalle={info}")
+                    try:
+                        self.on_status(msg)
+                    except Exception:
+                        pass
+                except Exception as e:
+                    _log("error", f"run_loop_closure error: {e}\n{traceback.format_exc()}")
+
+            # Exportar trayectoria de la corrida (CSV/TUM/PNG + diagnosticos)
+            # a Download/slam_logs/runs/<ts>, para evaluacion offline.
+            if slam is not None and getattr(slam, "keyframe_poses", None):
+                try:
+                    import numpy as _np
+                    import slam_utils as _su
+                    base = _su._get_downloads_slam_logs_dir() or "."
+                    out_dir = os.path.join(base, "runs",
+                                           time.strftime("%Y%m%d_%H%M%S"))
+                    traj = _np.array(
+                        [[p[0, 3], p[2, 3]] for p in slam.keyframe_poses],
+                        dtype=float)
+                    _su.save_trajectory_outputs(slam, traj, "live_run",
+                                                output_dir=out_dir)
+                    _log("info", f"Trayectoria exportada en {out_dir}")
+                except Exception as e:
+                    _log("error", f"export trayectoria error: {e}\n{traceback.format_exc()}")
+
             # Limpieza y notificación final
-            try:
-                self.on_status("SLAM detenido")
-            except Exception as e:
-                _log("error", f"on_status error al detener: {e}\n{traceback.format_exc()}")
+            if not lc_ran:
+                try:
+                    self.on_status("SLAM detenido")
+                except Exception as e:
+                    _log("error", f"on_status error al detener: {e}\n{traceback.format_exc()}")
 
             # Intentar liberar recursos del SLAM 
             if slam is not None:
